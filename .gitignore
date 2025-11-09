@@ -1,0 +1,28 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+cache/content-v2/sha512/03/aa/01b06dfd1c0c1015b49db250fdbe6b3cc2d0e9b9a6675ea2766cf3d460318a831d0e21c9aedb5a9e23797e839185fcfa5de593c346a90c1c7dd7c9147dd5
+/cache
+/src-tauri/target
+/~/.tauri

@@ -1,0 +1,29 @@
+{
+  "id": "1154018437429985310",
+  "username": "secret_Project",
+  "avatar": "55a5914c69fda1193f2efa2cdaed3bad",
+  "discriminator": "0",
+  "public_flags": 4194368,
+  "flags": 4194368,
+  "banner": "a_8b0b06cbaf13cfb79d1328d8671dc5c3",
+  "accent_color": 0,
+  "global_name": "secret_Project",
+  "avatar_decoration_data": {
+    "asset": "a_2f8ce70f2bc31b9ac6c27477019ebaaa",
+    "sku_id": "1341522018197311519"
+  },
+  "banner_color": "#000000",
+  "clan": null,
+  "primary_guild": null,
+  "mfa_enabled": null,
+  "locale": "de",
+  "premium_type": 2,
+  "roles": [
+    "1341908778655682560",
+    "1321947091924422657",
+    "1321954647791108147",
+    "1353034817419345940",
+    "1332201256772698133",
+    "1328563673437962270"
+  ]
+}

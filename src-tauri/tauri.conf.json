@@ -1,0 +1,60 @@
+{
+  "build": {
+    "beforeDevCommand": "cls && yarn dev",
+    "beforeBuildCommand": "cls && yarn build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "Project Launcher",
+    "version": "0.0.2"
+  },
+  "tauri": {
+    "allowlist": {
+      "http": {
+        "all": true,
+        "request": true,
+        "scope": ["http://127.0.0.1:3551/**", "http://localhost:5000/**"]
+      },
+      "shell": {
+        "all": true,
+        "execute": true
+      },
+      "all": true,
+      "protocol": {
+        "all": true,
+        "assetScope": ["*/**"]
+      },
+      "fs": {
+        "all": true,
+        "scope": ["*/**"]
+      }
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "maximizable": true,
+        "resizable": true,
+        "title": "Project Launcher",
+        "decorations": true,
+        "center": true,
+        "transparent": true,
+        "minWidth": 1300,
+        "minHeight": 700
+      }
+    ],
+    "security": {
+      "csp": "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * data: blob:;"
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.project.app",
+      "icon": [
+        "icons/icon.icns",
+        "icons/logo.ico"
+      ],
+      "resources": []
+    }
+  }
+}
