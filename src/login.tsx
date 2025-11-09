@@ -44,10 +44,6 @@ export default function Login() {
       setError("Please enter a valid email address.");
       return;
     }
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters long.");
-      return;
-    }
 
     setLoading(true);
     try {
@@ -119,7 +115,6 @@ export default function Login() {
                   onChange={handleChange}
                   placeholder="••••••••"
                   className="w-full rounded-lg bg-[#141414] border border-white/10 px-4 py-3 pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
-                  minLength={6}
                 />
                 <button
                   type="button"
