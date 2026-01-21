@@ -3812,6 +3812,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "projectlauncher"
+version = "1.0.20"
+dependencies = [
+ "async-std",
+ "dirs 6.0.0",
+ "discord-rpc-client",
+ "embed-resource 1.8.0",
+ "futures",
+ "futures-util",
+ "injrs",
+ "lazy_static",
+ "libloading",
+ "mongodb",
+ "msgbox",
+ "ntapi",
+ "num_cpus",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sysinfo",
+ "tasklist",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-deep-link",
+ "time",
+ "tokio",
+ "uuid",
+ "warp",
+ "winapi",
+ "window-shadows",
+ "window-vibrancy",
+ "windows 0.48.0",
+ "winres",
+ "zip 2.2.3",
+ "zip-extract",
+]
+
+[[package]]
 name = "quick-xml"
 version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4623,46 +4663,6 @@ checksum = "c970269d99b64e60ec3bd6ad27270092a5394c4e309314b18ae3fe575695fbe8"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "sololauncher"
-version = "1.0.20"
-dependencies = [
- "async-std",
- "dirs 6.0.0",
- "discord-rpc-client",
- "embed-resource 1.8.0",
- "futures",
- "futures-util",
- "injrs",
- "lazy_static",
- "libloading",
- "mongodb",
- "msgbox",
- "ntapi",
- "num_cpus",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "sha2",
- "sysinfo",
- "tasklist",
- "tauri",
- "tauri-build",
- "tauri-plugin-deep-link",
- "time",
- "tokio",
- "uuid",
- "warp",
- "winapi",
- "window-shadows",
- "window-vibrancy",
- "windows 0.48.0",
- "winres",
- "zip 2.2.3",
- "zip-extract",
 ]
 
 [[package]]

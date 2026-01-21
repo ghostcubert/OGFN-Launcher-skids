@@ -15,8 +15,16 @@ import {
   Plus,
   Trash2,
   User,
+  Trophy,
+  ShoppingCart
 } from "lucide-react";
 import "./App.css";
+
+interface ArenaLeaderboardEntry {
+  username: string;
+  hype: number;
+  division: number;
+}
 
 /* -------------------- Helpers -------------------- */
 function bytesToBase64(bytes: Uint8Array) {
@@ -33,7 +41,7 @@ function getFolderName(p: string) {
 }
 
 /* -------------------- Types -------------------- */
-type TabKey = "home" | "library" | "news" | "settings";
+type TabKey = "home" | "library" | "news" | "settings" | "shop" |"leaderboard";
 type BuildItem = { id: string; path: string; name: string; coverDataUrl?: string };
 type NewsItem = { id: string; title: string; date: string; desc: string; img?: string };
 /* -------------------- Component -------------------- */
@@ -222,7 +230,6 @@ const LeftNav: React.FC = () => (
           className="w-full h-full object-cover"
         />
       </div>
-
       <div className="flex-1">
         <div className="text-sm text-white font-semibold">Project</div>
         <div className="text-xs text-slate-300">Launcher</div>
@@ -233,6 +240,9 @@ const LeftNav: React.FC = () => (
     <nav className="p-3 space-y-1 flex-1">
       <NavItem icon={<Home size={18} />} label="Home" active={active === "home"} onClick={() => setActive("home")} />
       <NavItem icon={<Grid size={18} />} label="Library" active={active === "library"} onClick={() => setActive("library")} />
+      <NavItem icon={<ShoppingCart size={18} />} label="Shop" active={active === "shop"} onClick={() => setActive("shop")} />
+      <NavItem icon={<Trophy size={18} />} label="Leaderboard" active={active === "leaderboard"} onClick={() => setActive("leaderboard")} />
+
       <div className="mt-4 border-t border-[#14202b] pt-3">
         <NavItem icon={<Settings size={18} />} label="Settings" active={active === "settings"} onClick={() => setActive("settings")} />
       </div>
@@ -284,11 +294,10 @@ const TopBar: React.FC = () => (
   /* Hero carousel / featured area (Epic-like big banner) */
   const HeroBanner: React.FC = () => {
     const current = builds.find((b) => b.path === path) ?? builds[0];
-    const hero = current?.coverDataUrl ?? news[0]?.img ?? "https://images.unsplash.com/photo-1542751371-adc38448a04e?q=80&w=1400&auto=format&fit=crop&ixlib=rb-4.0.3&s=eea54b4e7a7f2a91a2b2a2b4d2f4a2b1";
     return (
       <div className="mb-6">
         <div className="relative rounded-xl overflow-hidden border border-[#122432] bg-[#000000]/10 backdrop-blur-sm">
-          <img src={hero} alt="hero" className="w-full h-64 object-cover brightness-75" />
+          <img src="https://i.imgur.com/CPdmKDe.jpeg" className="w-full h-64 object-cover brightness-75" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#04121a]/80" />
           <div className="absolute left-8 bottom-8 right-8 flex items-center gap-6">
             <div className="flex-1">
@@ -381,7 +390,6 @@ const TopBar: React.FC = () => (
               <div className="text-xs text-slate-400">{n.date}</div>
               <div className="text-lg text-white font-semibold mt-1">{n.title}</div>
               <div className="text-sm text-slate-300 mt-2">{n.desc}</div>
-              <div className="mt-3"><button className="px-3 py-2 rounded-md bg-[#0b2a36] text-slate-200">Read more</button></div>
             </div>
           </div>
         ))}
