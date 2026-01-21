@@ -291,10 +291,6 @@ const TopBar: React.FC = () => (
           <img src={hero} alt="hero" className="w-full h-64 object-cover brightness-75" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#04121a]/80" />
           <div className="absolute left-8 bottom-8 right-8 flex items-center gap-6">
-            <div className="w-40 h-24 bg-[#071a24]/60 rounded-md overflow-hidden border border-[#11303b]">
-              <img src={hero} alt="thumb" className="w-full h-full object-cover" />
-            </div>
-
             <div className="flex-1">
               <div className="text-2xl font-bold text-white drop-shadow">{current?.name ?? "Featured"}</div>
               <div className="text-sm text-slate-300 mt-1">{current ? `Installed: ${current.path}` : "No build selected — add one in Library"}</div>
@@ -304,7 +300,6 @@ const TopBar: React.FC = () => (
                 </motion.button>
 
                 <button onClick={() => setActive("library")} className="cursor-pointer px-4 py-2 rounded-md bg-[#102834]/70 text-slate-200">Library</button>
-                <button onClick={() => setActive("news")} className="cursor-pointer px-4 py-2 rounded-md bg-[#102834]/70 text-slate-200">Patch Notes</button>
               </div>
             </div>
 
