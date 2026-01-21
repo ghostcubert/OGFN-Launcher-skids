@@ -69,7 +69,7 @@ export default function Onboard() {
     const rawEOR = localStorage.getItem("EOR");
     if (rawEOR !== null) setEOR(rawEOR === "true");
 
-    const savedBuilds = localStorage.getItem("ProjectMP.builds");
+    const savedBuilds = localStorage.getItem("SettingsMP.builds");
     if (savedBuilds) {
       try {
         const parsed = JSON.parse(savedBuilds) as BuildItem[];
@@ -80,7 +80,7 @@ export default function Onboard() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("ProjectMP.builds", JSON.stringify(builds));
+    localStorage.setItem("SettingsMP.builds", JSON.stringify(builds));
   }, [builds]);
 
   useEffect(() => {
@@ -189,7 +189,7 @@ export default function Onboard() {
       const updatedBuilds = [item, ...builds];
       setBuilds(updatedBuilds);
       setPath(selected);
-      localStorage.setItem("ProjectMP.builds", JSON.stringify(updatedBuilds));
+      localStorage.setItem("SettingsMP.builds", JSON.stringify(updatedBuilds));
     } catch (e) {
       setError("Could not add build: " + String(e));
       setTimeout(() => setError(null), 5000);
@@ -200,7 +200,7 @@ export default function Onboard() {
     setBuilds((prev) => {
       const next = prev.filter((b) => b.id !== id);
       const removed = prev.find((b) => b.id === id);
-      localStorage.setItem("ProjectMP.builds", JSON.stringify(next));
+      localStorage.setItem("SettingsMP.builds", JSON.stringify(next));
       if (removed && removed.path === path) {
         if (next[0]) setPath(next[0].path); else setPath(null);
       }
@@ -247,7 +247,7 @@ const LeftNav: React.FC = () => (
           <div className="text-sm text-white truncate">{user?.email ?? "Not signed in"}</div>
           <div className="text-xs text-slate-400">EOR: {EOR ? "On" : "Off"}</div>
         </div>
-        <button onClick={handleLogout} className="ml-2 px-2 py-1 rounded-md bg-[#2b4754] text-xs text-white hover:bg-[#334d5b]">
+        <button onClick={handleLogout} className="cursor-pointer ml-2 px-2 py-1 rounded-md bg-[#2b4754] text-xs text-white hover:bg-[#334d5b]">
           <LogOut size={14} />
         </button>
       </div>
@@ -257,7 +257,7 @@ const LeftNav: React.FC = () => (
 
   function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void; }) {
     return (
-      <button onClick={onClick} className={`w-full text-left px-3 py-2 rounded-md flex items-center gap-3 ${active ? "bg-gradient-to-r from-[#0f1724] to-[#13222b] ring-1 ring-[#0ea5e9]/20 text-white" : "text-slate-300 hover:bg-[#071422]/60"}`}>
+      <button onClick={onClick} className={`cursor-pointer w-full text-left px-3 py-2 rounded-md flex items-center gap-3 ${active ? "bg-gradient-to-r from-[#0f1724] to-[#13222b] ring-1 ring-[#0ea5e9]/20 text-white" : "text-slate-300 hover:bg-[#071422]/60"}`}>
         <div className="w-7 h-7 grid place-items-center text-slate-200">{icon}</div>
         <div className="text-sm">{label}</div>
       </button>
@@ -299,12 +299,12 @@ const TopBar: React.FC = () => (
               <div className="text-2xl font-bold text-white drop-shadow">{current?.name ?? "Featured"}</div>
               <div className="text-sm text-slate-300 mt-1">{current ? `Installed: ${current.path}` : "No build selected — add one in Library"}</div>
               <div className="mt-4 flex items-center gap-3">
-                <motion.button onClick={handleLaunch} whileTap={{ scale: 0.98 }} disabled={isLaunching || !current || !user} className="px-6 py-3 rounded-md bg-[#0ea5e9] text-black font-semibold shadow-lg disabled:opacity-60 flex items-center gap-2">
+                <motion.button onClick={handleLaunch} whileTap={{ scale: 0.98 }} disabled={isLaunching || !current || !user} className="cursor-pointer px-6 py-3 rounded-md bg-[#0ea5e9] text-black font-semibold shadow-lg disabled:opacity-60 flex items-center gap-2">
                   <Play size={16} /> {isLaunching ? "Launching..." : "PLAY"}
                 </motion.button>
 
-                <button onClick={() => setActive("library")} className="px-4 py-2 rounded-md bg-[#102834]/70 text-slate-200">Library</button>
-                <button onClick={() => setActive("news")} className="px-4 py-2 rounded-md bg-[#102834]/70 text-slate-200">Patch Notes</button>
+                <button onClick={() => setActive("library")} className="cursor-pointer px-4 py-2 rounded-md bg-[#102834]/70 text-slate-200">Library</button>
+                <button onClick={() => setActive("news")} className="cursor-pointer px-4 py-2 rounded-md bg-[#102834]/70 text-slate-200">Patch Notes</button>
               </div>
             </div>
 
@@ -321,8 +321,8 @@ const TopBar: React.FC = () => (
         <div className="mt-3 flex gap-3 overflow-x-auto">
           {news.map((n) => (
             <motion.div key={n.id} whileHover={{ y: -6 }} className="min-w-[260px] rounded-md overflow-hidden border border-[#122432] bg-[#06161d]/70 backdrop-blur-sm">
-              <img src={n.img} alt={n.title} className="h-28 w-full object-cover" />
-              <div className="p-3">
+              <img src={n.img} alt={n.title} className="cursor-pointer h-28 w-full object-cover" />
+              <div className="cursor-pointer p-3">
                 <div className="text-xs text-slate-400">{n.date}</div>
                 <div className="text-sm text-white font-semibold mt-1">{n.title}</div>
                 <div className="text-xs text-slate-300 mt-1 line-clamp-2">{n.desc}</div>
@@ -343,7 +343,7 @@ const TopBar: React.FC = () => (
           <div className="text-xs text-slate-400">Your builds & installs</div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={addBuild} className="px-3 py-2 rounded-md bg-[#0f3342]/80 text-slate-200 flex items-center gap-2"><Plus size={14} /> Add Build</button>
+          <button onClick={addBuild} className="cursor-pointer px-3 py-2 rounded-md bg-[#0f3342]/80 text-slate-200 flex items-center gap-2"><Plus size={14} /> Add Build</button>
         </div>
       </div>
 
@@ -361,9 +361,7 @@ const TopBar: React.FC = () => (
                 <div className="text-sm font-medium text-white truncate">{b.name}</div>
                 <div className="text-xs text-slate-400 mt-1 truncate">{getFolderName(b.path)}</div>
                 <div className="mt-3 flex items-center gap-2">
-                  <button onClick={() => setPath(b.path)} className="px-3 py-1 rounded-md bg-[#0b2a36]/80 text-xs">Select</button>
-                  <button onClick={() => { setPath(b.path); handleLaunch(); }} className="px-3 py-1 rounded-md bg-[#0ea5e9] text-xs text-black flex items-center gap-2"><Play size={12} /> Play</button>
-                  <button onClick={() => removeBuild(b.id)} className="ml-auto px-2 py-1 rounded-md hover:bg-[#0b2a36] text-slate-300"><Trash2 size={14} /></button>
+                  <button onClick={() => removeBuild(b.id)} className="cursor-pointer ml-auto px-2 py-1 rounded-md hover:bg-[#0b2a36] text-slate-300"><Trash2 size={14} /></button>
                 </div>
               </div>
             </motion.div>
@@ -406,7 +404,7 @@ const SettingsPanel: React.FC = () => (
         <label className="text-sm">EOR</label>
         <button
           onClick={() => handleToggleEOR(!EOR)}
-          className={`ml-auto inline-flex h-7 w-14 items-center rounded-full p-1 ${EOR ? "bg-[#0ea5e9]" : "bg-[#0b2a36]"}`}
+          className={`cursor-pointer ml-auto inline-flex h-7 w-14 items-center rounded-full p-1 ${EOR ? "bg-[#0ea5e9]" : "bg-[#0b2a36]"}`}
         >
           <span
             className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${EOR ? "translate-x-7" : "translate-x-0"}`}
@@ -423,7 +421,7 @@ const SettingsPanel: React.FC = () => (
       <div className="mt-3">
         <button
           onClick={handleLogout}
-          className="px-3 py-1 rounded-md bg-[#0ea5e9] text-black text-xs"
+          className="cursor-pointer px-3 py-1 rounded-md bg-[#0ea5e9] text-black text-xs"
         >
           Logout
         </button>
@@ -483,8 +481,7 @@ const SettingsPanel: React.FC = () => (
                               <div className="font-semibold text-white">{b.name}</div>
                               <div className="text-xs text-slate-400 mt-1">{getFolderName(b.path)}</div>
                               <div className="mt-3 flex items-center gap-2">
-                                <button onClick={() => { setPath(b.path); handleLaunch(); }} className="px-3 py-1 rounded-md bg-[#0ea5e9] text-black text-xs">Play</button>
-                                <button onClick={() => removeBuild(b.id)} className="px-3 py-1 rounded-md bg-[#0b2a36] text-xs">Remove</button>
+                                <button onClick={() => removeBuild(b.id)} className="cursor-pointer px-3 py-1 rounded-md bg-[#0b2a36] text-xs">Remove</button>
                               </div>
                             </div>
                           </div>
@@ -497,8 +494,8 @@ const SettingsPanel: React.FC = () => (
                     <div className="rounded-md border border-[#122432] p-4 bg-[#04121a]/60 backdrop-blur-sm">
                       <div className="text-sm font-semibold">Quick Actions</div>
                       <div className="mt-3 space-y-2">
-                        <button onClick={() => setActive("library")} className="w-full px-3 py-2 rounded-md bg-[#0b2a36]">Open Library</button>
-                        <button onClick={() => setActive("news")} className="w-full px-3 py-2 rounded-md bg-[#0b2a36]">View Patch Notes</button>
+                        <button onClick={() => setActive("library")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36]">Open Library</button>
+                        <button onClick={() => setActive("news")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36]">View Patch Notes</button>
                       </div>
                     </div>
                   </div>

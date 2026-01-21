@@ -13,8 +13,7 @@
     "allowlist": {
       "http": {
         "all": true,
-        "request": true,
-        "scope": ["http://127.0.0.1:3551/**", "http://localhost:5000/**"]
+        "request": true
       },
       "shell": {
         "all": true,

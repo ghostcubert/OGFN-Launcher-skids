@@ -356,7 +356,7 @@ async fn dll_replace(path: &str, app: AppHandle) -> Result<bool, String> {
     }
 
     let _ = download(
-        "DLL",
+        "https://github.com/lalaland1212/LocalDLL127001/raw/refs/heads/main/",
         "Starfall.dll",
         nvidia_path.clone().to_str().unwrap(),
         &window,

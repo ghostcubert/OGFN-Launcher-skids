@@ -46,12 +46,41 @@ export default function Login() {
     }
 
     setLoading(true);
+
     try {
-      if (remember)
-        localStorage.setItem("user", JSON.stringify({ ...form, username: form.email }));
-      navigate("/onboard");
+      const params = new URLSearchParams({
+        email: form.email,
+        password: form.password,
+      });
+
+      const response = await fetch(`http://127.0.0.1:3551/api/launcher/login?${params.toString()}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+      if (remember) {
+          localStorage.setItem(
+            "user",
+            JSON.stringify({ 
+              email: form.email, 
+              password: form.password, // <--- Add this line
+              username: data.username 
+            })
+          );
+        }
+        navigate("/onboard");
+      } else {
+        const errorMessage = await response.text();
+        setError(errorMessage || "An error occurred during login.");
+      }
     } catch (err) {
-      setError("Wrong email or password.");
+      console.error(err);
+      setError("Unable to connect to the server.");
     } finally {
       setLoading(false);
     }
@@ -100,7 +129,7 @@ export default function Login() {
                 value={form.email}
                 onChange={handleChange}
                 placeholder="name@example.com"
-                className="mt-1 w-full rounded-lg bg-[#141414] border border-white/10 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+                className="cursor-text mt-1 w-full rounded-lg bg-[#141414] border border-white/10 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
               />
             </div>
 
@@ -119,7 +148,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPw((s) => !s)}
-                  className="absolute inset-y-0 right-2 flex items-center px-2 rounded-lg hover:bg-white/5 transition"
+                  className="cursor-pointer absolute inset-y-0 right-2 flex items-center px-2 rounded-lg hover:bg-white/5 transition"
                 >
                   {showPw ? <IconEyeOff /> : <IconEye />}
                 </button>
@@ -137,7 +166,7 @@ export default function Login() {
               disabled={loading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full rounded-lg px-6 py-3 font-semibold text-white bg-gradient-to-r from-blue-700 to-blue-500 shadow-lg hover:from-blue-600 hover:to-blue-400 transition-all disabled:opacity-60"
+              className="cursor-pointer w-full rounded-lg px-6 py-3 font-semibold text-white bg-gradient-to-r from-blue-700 to-blue-500 shadow-lg hover:from-blue-600 hover:to-blue-400 transition-all disabled:opacity-60"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

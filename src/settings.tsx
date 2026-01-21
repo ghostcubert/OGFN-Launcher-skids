@@ -177,7 +177,7 @@ function Settings() {
                   animate={{ opacity: 1, x: 0 }}
                   className="text-lg font-bold tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-yellow-500"
                 >
-                  ProjectMP
+                  SettingsMP
                 </motion.span>
               )}
             </div>

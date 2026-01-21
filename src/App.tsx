@@ -71,7 +71,7 @@ function App() {
               ease: [0.16, 1, 0.3, 1],
             }}
           >
-            ProjectMP
+            SettingsMP
           </motion.h2>
           <motion.div
             className="flex justify-center"
