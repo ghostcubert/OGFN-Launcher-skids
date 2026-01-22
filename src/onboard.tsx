@@ -26,12 +26,18 @@ interface ArenaLeaderboardEntry {
   division: number;
 }
 
-interface ShopItem {
-  devName: string;
-  offerId: string;
+interface ShopEntry {
+  id: string; // The key, e.g., "daily1"
+  itemGrants: string[];
   price: number;
-  section: string;
-  items: { templateId: string; quantity: number }[];
+}
+
+interface CosmeticInfo {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  rarity: string;
 }
 
 /* -------------------- Helpers -------------------- */
@@ -78,105 +84,12 @@ const TabTransition: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   </motion.div>
 );
 
-const ShopPanel: React.FC = () => {
-  const [offers, setOffers] = useState<ShopItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // UPDATED: Fetch from your specific available shop endpoint
-    fetch("http://localhost:3551/api/shop/available")
-      .then((res) => res.json())
-      .then((data) => {
-        setOffers(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Shop fetch error:", err);
-        setLoading(false);
-      });
-  }, []);
-
-  // UPDATED: Better image handling
-  const getImageUrl = (templateId: string) => {
-    if (!templateId) return 'https://i.ibb.co/hR0Z0wV/no-image.png';
-    const id = templateId.split(":")[1];
-    // We use the 'icon' path but provide a fallback in the JSX below
-    return `https://fortnite-api.com/v2/cosmetics/br/${id}/icon.png`;
-  };
-
-  return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-[#0ea5e9]/10 rounded-xl text-[#0ea5e9] border border-[#0ea5e9]/20">
-            <ShoppingCart size={32} />
-          </div>
-          <div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Item Shop</h2>
-            <p className="text-slate-400 text-sm">Active Items</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {loading ? (
-          [...Array(4)].map((_, i) => (
-            <div key={i} className="aspect-[3/4] bg-[#04121a] animate-pulse rounded-xl border border-[#122432]" />
-          ))
-        ) : (
-          offers.map((offer) => (
-            <motion.div
-              key={offer.offerId || offer.devName}
-              whileHover={{ y: -5, scale: 1.02 }}
-              className="group relative bg-[#04121a]/60 border border-[#122432] rounded-xl overflow-hidden backdrop-blur-sm flex flex-col shadow-xl"
-            >
-              <div className="aspect-square relative p-4 bg-gradient-to-b from-white/5 to-transparent flex items-center justify-center">
-                <img 
-                  src={getImageUrl(offer.items[0]?.templateId)} 
-                  alt={offer.devName}
-                  className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(14,165,233,0.4)]"
-                  onError={(e) => { 
-                    // FALLBACK: If icon.png fails, try the featured.png which often works for older skins
-                    const target = e.target as HTMLImageElement;
-                    if (!target.src.includes('featured.png')) {
-                        const id = offer.items[0].templateId.split(":")[1];
-                        target.src = `https://fortnite-api.com/v2/cosmetics/br/${id}/featured.png`;
-                    } else {
-                        target.src = 'https://i.ibb.co/hR0Z0wV/no-image.png';
-                    }
-                  }}
-                />
-              </div>
-
-              <div className="p-4 space-y-3 relative z-10 bg-[#071422]/90 border-t border-[#122432]">
-                {/* FIXED: Simply use devName since your backend now sends the config key name */}
-                <div className="font-black text-white uppercase text-xs truncate">
-                  {offer.devName}
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-[#0ea5e9] font-bold text-sm">
-                    <div className="w-4 h-4 rounded-full bg-[#0ea5e9] text-[10px] text-white flex items-center justify-center">V</div>
-                    {offer.price.toLocaleString()}
-                  </div>
-                  <button className="px-3 py-1 bg-white/5 hover:bg-[#0ea5e9] hover:text-white text-slate-300 text-[10px] font-black uppercase rounded transition-all">
-                    Purchase
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
-
 const LeaderboardPanel: React.FC = () => {
   const [entries, setEntries] = useState<ArenaLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:3551/api/arena/leaderboard")
+    fetch("http://127.0.0.1:3551/api/launcher/leaderboard")
       .then((res) => res.json())
       .then((data) => {
         setEntries(data);
@@ -268,6 +181,164 @@ const LeaderboardPanel: React.FC = () => {
     </div>
   );
 };
+
+const ShopPanel: React.FC = () => {
+  const [shopItems, setShopItems] = useState<ShopEntry[]>([]);
+  const [cosmetics, setCosmetics] = useState<Record<string, CosmeticInfo>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchShop = async () => {
+      try {
+        // 1. Fetch your local config
+        // Ensure this URL matches where your backend is running
+        const res = await fetch("http://127.0.0.1:3551/api/launcher/shop");
+        const data = await res.json();
+        
+        const entries: ShopEntry[] = [];
+        const itemIdsToFetch: string[] = [];
+
+        // Parse the config object (daily1, featured1, etc.)
+        Object.keys(data).forEach((key) => {
+          // Skip comments or metadata
+          if (key === "//") return;
+          
+          const entry = data[key];
+          if (entry.itemGrants && entry.itemGrants.length > 0 && entry.itemGrants[0] !== "") {
+            entries.push({ id: key, itemGrants: entry.itemGrants, price: entry.price });
+            
+            // Extract the raw ID (remove AthenaCharacter: prefix)
+            entry.itemGrants.forEach((grant: string) => {
+              const parts = grant.split(":");
+              if (parts.length > 1) itemIdsToFetch.push(parts[1]);
+            });
+          }
+        });
+
+        setShopItems(entries);
+
+        // 2. Fetch cosmetic details from public API for images
+        // We do this individually or in batches. For simplicity, we fetch individually here.
+        const cosmeticMap: Record<string, CosmeticInfo> = {};
+        
+        await Promise.all(
+          itemIdsToFetch.map(async (id) => {
+            try {
+              const apiRes = await fetch(`https://fortnite-api.com/v2/cosmetics/br/${id}`);
+              const apiData = await apiRes.json();
+              if (apiData.status === 200) {
+                cosmeticMap[id] = {
+                  id: apiData.data.id,
+                  name: apiData.data.name,
+                  description: apiData.data.description,
+                  image: apiData.data.images.icon || apiData.data.images.smallIcon,
+                  rarity: apiData.data.rarity.value,
+                };
+              }
+            } catch (e) {
+              console.warn("Failed to fetch cosmetic info for", id);
+            }
+          })
+        );
+        
+        setCosmetics(cosmeticMap);
+        setLoading(false);
+      } catch (err) {
+        console.error("Shop fetch error:", err);
+        setLoading(false);
+      }
+    };
+
+    fetchShop();
+  }, []);
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity?.toLowerCase()) {
+      case "legendary": return "border-yellow-400 bg-yellow-400/10 text-yellow-400";
+      case "epic": return "border-purple-400 bg-purple-400/10 text-purple-400";
+      case "rare": return "border-blue-400 bg-blue-400/10 text-blue-400";
+      case "uncommon": return "border-green-400 bg-green-400/10 text-green-400";
+      default: return "border-slate-500 bg-slate-500/10 text-slate-300";
+    }
+  };
+
+  return (
+    <div className="animate-in fade-in duration-500">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="p-3 bg-pink-500/10 rounded-xl text-pink-500 border border-pink-500/20">
+          <ShoppingCart size={32} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black text-white uppercase tracking-tight">Item Shop</h2>
+          <p className="text-slate-400 text-sm">Current Rotation</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-20">
+           <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {shopItems.length === 0 ? (
+            <div className="col-span-full text-center text-slate-500 italic py-10">
+              The shop is currently closed (No items in config).
+            </div>
+          ) : (
+            shopItems.map((entry) => {
+              // We only show the first item in the grant list for the card
+              const rawId = entry.itemGrants[0].split(":")[1];
+              const info = cosmetics[rawId];
+              
+              // Fallback if API fails
+              const displayName = info ? info.name : rawId;
+              const displayImg = info ? info.image : "https://i.ibb.co/1GVGmGPh/logo.png"; // Fallback image
+              const rarityStyle = getRarityColor(info?.rarity);
+
+              return (
+                <motion.div 
+                  key={entry.id}
+                  whileHover={{ y: -4 }}
+                  className={`relative group rounded-xl overflow-hidden border-2 bg-[#04121a]/80 backdrop-blur-sm transition-colors ${info ? rarityStyle.split(" ")[0] : "border-[#122432]"}`}
+                >
+                  <div className="aspect-[3/4] overflow-hidden relative">
+                     {/* Background Gradient based on rarity */}
+                    <div className={`absolute inset-0 opacity-20 ${info ? rarityStyle.split(" ")[1].replace("/10", "/40") : "bg-slate-800"}`} />
+                    
+                    <img 
+                      src={displayImg} 
+                      alt={displayName} 
+                      className="w-full h-full object-cover relative z-10 transition-transform duration-500 group-hover:scale-110" 
+                    />
+                    
+                    <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 to-transparent z-20">
+                      <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${info ? rarityStyle.split(" ")[2] : "text-slate-400"}`}>
+                        {info?.rarity || "Common"}
+                      </div>
+                      <div className="font-bold text-white leading-tight">{displayName}</div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 border-t border-[#122432] bg-[#071422] flex items-center justify-between">
+                     <div className="flex items-center gap-1">
+                        {/* V-Bucks Icon */}
+                        <img src="https://image.fnbr.co/price/icon_vbucks_50x.png" className="w-4 h-4" alt="V" />
+                        <span className="font-bold text-white">{entry.price}</span>
+                     </div>
+                     <button className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white font-medium transition-colors">
+                        Inspect
+                     </button>
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
   // mock news / hero carousel images (swap as you like)
   const [news] = useState<NewsItem[]>([
     { id: "n1", title: "Patch v2.5 — Performance & polish", date: "Oct 12, 2025", desc: "Performance improvements + UI polish. Read full patch notes in the launcher.", img: "https://i.ibb.co/HLQqKrj4/Chapter-2-Remix-Header.webp" },
@@ -579,7 +650,7 @@ const TopBar: React.FC = () => (
         ) : builds.map((b) => {
           const selected = b.path === path;
           return (
-            <motion.div key={b.id} whileHover={{ scale: 1.02 }} className={`rounded-md overflow-hidden border ${selected ? "ring-2 ring-[#0ea5e9]/30" : "border-[#122432]"} bg-[#05131a]/60 backdrop-blur-sm`}>
+            <motion.div key={b.id} whileHover={{ scale: 1.02 }} className={`rounded-md overflow-hidden ${selected ? "ring-2 ring-[#0ea5e9]/30" : "border-[#122432]"} bg-[#05131a]/60 backdrop-blur-sm`}>
               <div className="h-40 bg-[#071823]/60 flex items-center justify-center overflow-hidden">
                 {b.coverDataUrl ? <img src={b.coverDataUrl} alt={b.name} className="w-full h-full object-cover" /> : <div className="text-xs text-slate-400">No cover</div>}
               </div>
@@ -751,15 +822,15 @@ const SettingsPanel: React.FC = () => (
                 </TabTransition>
               )}
 
-              {active === "settings" && (
-                <TabTransition key="settings">
-                  <SettingsPanel />
-                </TabTransition>
-              )}
-
               {active === "shop" && (
                 <TabTransition key="shop">
                   <ShopPanel />
+                </TabTransition>
+              )}
+
+              {active === "settings" && (
+                <TabTransition key="settings">
+                  <SettingsPanel />
                 </TabTransition>
               )}
 
