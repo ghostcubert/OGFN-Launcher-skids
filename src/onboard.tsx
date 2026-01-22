@@ -16,7 +16,7 @@ import {
   Trash2,
   User,
   Trophy,
-  ShoppingCart
+  ShoppingCart,
 } from "lucide-react";
 import "./App.css";
 
@@ -24,6 +24,14 @@ interface ArenaLeaderboardEntry {
   username: string;
   hype: number;
   division: number;
+}
+
+interface ShopItem {
+  devName: string;
+  offerId: string;
+  price: number;
+  section: string;
+  items: { templateId: string; quantity: number }[];
 }
 
 /* -------------------- Helpers -------------------- */
@@ -57,6 +65,209 @@ export default function Onboard() {
   const [builds, setBuilds] = useState<BuildItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+/* -------------------- Animations -------------------- */
+const TabTransition: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 5 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -5 }}
+    transition={{ duration: 0.15, ease: "linear" }} // Faster duration prevents the "clunky" feel
+    className="w-full"
+  >
+    {children}
+  </motion.div>
+);
+
+const ShopPanel: React.FC = () => {
+  const [offers, setOffers] = useState<ShopItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // UPDATED: Fetch from your specific available shop endpoint
+    fetch("http://localhost:3551/api/shop/available")
+      .then((res) => res.json())
+      .then((data) => {
+        setOffers(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Shop fetch error:", err);
+        setLoading(false);
+      });
+  }, []);
+
+  // UPDATED: Better image handling
+  const getImageUrl = (templateId: string) => {
+    if (!templateId) return 'https://i.ibb.co/hR0Z0wV/no-image.png';
+    const id = templateId.split(":")[1];
+    // We use the 'icon' path but provide a fallback in the JSX below
+    return `https://fortnite-api.com/v2/cosmetics/br/${id}/icon.png`;
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-[#0ea5e9]/10 rounded-xl text-[#0ea5e9] border border-[#0ea5e9]/20">
+            <ShoppingCart size={32} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Item Shop</h2>
+            <p className="text-slate-400 text-sm">Active Items</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {loading ? (
+          [...Array(4)].map((_, i) => (
+            <div key={i} className="aspect-[3/4] bg-[#04121a] animate-pulse rounded-xl border border-[#122432]" />
+          ))
+        ) : (
+          offers.map((offer) => (
+            <motion.div
+              key={offer.offerId || offer.devName}
+              whileHover={{ y: -5, scale: 1.02 }}
+              className="group relative bg-[#04121a]/60 border border-[#122432] rounded-xl overflow-hidden backdrop-blur-sm flex flex-col shadow-xl"
+            >
+              <div className="aspect-square relative p-4 bg-gradient-to-b from-white/5 to-transparent flex items-center justify-center">
+                <img 
+                  src={getImageUrl(offer.items[0]?.templateId)} 
+                  alt={offer.devName}
+                  className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(14,165,233,0.4)]"
+                  onError={(e) => { 
+                    // FALLBACK: If icon.png fails, try the featured.png which often works for older skins
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes('featured.png')) {
+                        const id = offer.items[0].templateId.split(":")[1];
+                        target.src = `https://fortnite-api.com/v2/cosmetics/br/${id}/featured.png`;
+                    } else {
+                        target.src = 'https://i.ibb.co/hR0Z0wV/no-image.png';
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="p-4 space-y-3 relative z-10 bg-[#071422]/90 border-t border-[#122432]">
+                {/* FIXED: Simply use devName since your backend now sends the config key name */}
+                <div className="font-black text-white uppercase text-xs truncate">
+                  {offer.devName}
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[#0ea5e9] font-bold text-sm">
+                    <div className="w-4 h-4 rounded-full bg-[#0ea5e9] text-[10px] text-white flex items-center justify-center">V</div>
+                    {offer.price.toLocaleString()}
+                  </div>
+                  <button className="px-3 py-1 bg-white/5 hover:bg-[#0ea5e9] hover:text-white text-slate-300 text-[10px] font-black uppercase rounded transition-all">
+                    Purchase
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+const LeaderboardPanel: React.FC = () => {
+  const [entries, setEntries] = useState<ArenaLeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:3551/api/arena/leaderboard")
+      .then((res) => res.json())
+      .then((data) => {
+        setEntries(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Leaderboard fetch error:", err);
+        setLoading(false);
+      });
+  }, []);
+
+  const getRankStyle = (index: number) => {
+    if (index === 0) return { icon: "🥇", color: "text-yellow-400", bg: "bg-yellow-400/10" };
+    if (index === 1) return { icon: "🥈", color: "text-slate-300", bg: "bg-slate-300/10" };
+    if (index === 2) return { icon: "🥉", color: "text-amber-600", bg: "bg-amber-600/10" };
+    return { icon: `#${index + 1}`, color: "text-slate-500", bg: "bg-transparent" };
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto animate-in fade-in duration-500">
+      <div className="flex items-center gap-4 mb-8">
+        {/* Changed background and text to match the sky-blue theme of your "PLAY" button */}
+        <div className="p-3 bg-[#0ea5e9]/10 rounded-xl text-[#0ea5e9] border border-[#0ea5e9]/20">
+          <Trophy size={32} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black text-white uppercase tracking-tight">Arena Leaderboard</h2>
+          <p className="text-slate-400 text-sm">Top 10 players by Hype Points</p>
+        </div>
+      </div>
+
+      {/* Border color #122432 matches your News and Hero cards */}
+      <div className="rounded-xl border border-[#122432] bg-[#04121a]/60 backdrop-blur-sm overflow-hidden shadow-2xl">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            {/* Header row now uses #071422 background to match your TopBar */}
+            <tr className="bg-[#071422]/80 text-slate-400 text-xs uppercase tracking-widest border-b border-[#122432]">
+              <th className="px-8 py-5 font-bold">Rank</th>
+              <th className="px-8 py-5 font-bold">Player</th>
+              <th className="px-8 py-5 font-bold">Division</th>
+              <th className="px-8 py-5 font-bold text-right">Hype</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#122432]">
+            {loading ? (
+              <tr>
+                <td colSpan={4} className="px-8 py-20 text-center text-slate-500">
+                   <div className="flex flex-col items-center gap-2">
+                    <div className="w-6 h-6 border-2 border-[#0ea5e9] border-t-transparent rounded-full animate-spin" />
+                    <span>Syncing Rankings...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : entries.map((player, index) => {
+              const rank = getRankStyle(index);
+              return (
+                <tr key={index} className="hover:bg-white/[0.02] transition-colors group">
+                  <td className="px-8 py-5">
+                    <span className={`text-lg font-bold ${rank.color}`}>
+                      {rank.icon}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-3">
+                      {/* Avatar bg matches your LeftNav profile icon */}
+                      <div className="w-8 h-8 rounded-full bg-[#16303e] flex items-center justify-center text-xs font-bold text-white uppercase">
+                        {player.username[0]}
+                      </div>
+                      <span className="font-bold text-slate-200 group-hover:text-[#0ea5e9] transition-colors">
+                        {player.username}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5">
+                    {/* Badge colors match the "EOR" toggle style */}
+                    <span className="px-2 py-1 rounded bg-[#0b2a36] border border-[#122432] text-slate-300 text-[10px] font-black uppercase">
+                      Div {player.division}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5 text-right font-mono font-black text-[#0ea5e9] text-lg">
+                    {player.hype.toLocaleString()}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
   // mock news / hero carousel images (swap as you like)
   const [news] = useState<NewsItem[]>([
     { id: "n1", title: "Patch v2.5 — Performance & polish", date: "Oct 12, 2025", desc: "Performance improvements + UI polish. Read full patch notes in the launcher.", img: "https://i.ibb.co/HLQqKrj4/Chapter-2-Remix-Header.webp" },
@@ -266,13 +477,24 @@ const LeftNav: React.FC = () => (
 );
 
   function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void; }) {
-    return (
-      <button onClick={onClick} className={`cursor-pointer w-full text-left px-3 py-2 rounded-md flex items-center gap-3 ${active ? "bg-gradient-to-r from-[#0f1724] to-[#13222b] ring-1 ring-[#0ea5e9]/20 text-white" : "text-slate-300 hover:bg-[#071422]/60"}`}>
-        <div className="w-7 h-7 grid place-items-center text-slate-200">{icon}</div>
-        <div className="text-sm">{label}</div>
-      </button>
-    );
-  }
+  return (
+    <motion.button 
+      onClick={onClick} 
+      whileHover={{ x: 4 }}
+      whileTap={{ scale: 0.97 }}
+      className={`cursor-pointer w-full text-left px-3 py-2 rounded-md flex items-center gap-3 transition-all duration-200 ${
+        active 
+          ? "bg-gradient-to-r from-[#0ea5e9]/20 to-[#13222b] ring-1 ring-[#0ea5e9]/40 text-white" 
+          : "text-slate-400 hover:bg-[#071422]/60 hover:text-slate-200"
+      }`}
+    >
+      <div className={`w-7 h-7 grid place-items-center transition-colors ${active ? "text-[#0ea5e9]" : "text-slate-400"}`}>
+        {icon}
+      </div>
+      <div className="text-sm font-medium">{label}</div>
+    </motion.button>
+  );
+}
 
 /* Top bar (Epic-like) */
 const TopBar: React.FC = () => (
@@ -433,7 +655,7 @@ const SettingsPanel: React.FC = () => (
   </div>
 );
 
-  /* -------------------- Render main layout -------------------- */
+/* -------------------- Render main layout -------------------- */
   return (
     <div
       className="w-screen h-screen flex text-slate-100 relative overflow-hidden"
@@ -444,7 +666,7 @@ const SettingsPanel: React.FC = () => (
         backgroundRepeat: "no-repeat",
       }}
     >
-      {/* Blurred background overlay - visible but not overpowering */}
+      {/* Blurred background overlay */}
       <div className="absolute inset-0 backdrop-blur-2xl bg-black/50 z-0" />
 
       {/* Main content */}
@@ -455,60 +677,98 @@ const SettingsPanel: React.FC = () => (
 
           <AnimatePresence>
             {error && (
-              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="absolute right-6 top-6 z-50">
+              <motion.div 
+                initial={{ opacity: 0, y: -8 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: -8 }} 
+                className="absolute right-6 top-6 z-50"
+              >
                 <div className="bg-red-600/90 text-white px-4 py-2 rounded-md shadow">{error}</div>
               </motion.div>
             )}
           </AnimatePresence>
 
           <div className="flex-1 overflow-auto p-6">
-            {active === "home" && (
-              <>
-                <HeroBanner />
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    <div className="rounded-md border border-[#122432] p-4 bg-[#04121a]/60 backdrop-blur-sm">
-                      <div className="flex items-center justify-between mb-3">
-                        <div><div className="text-lg font-semibold">Featured & Highlights</div><div className="text-xs text-slate-400">Top picks from your library</div></div>
-                        <div className="flex items-center gap-2">
+            <AnimatePresence mode="wait">
+              {active === "home" && (
+                <TabTransition key="home">
+                  <HeroBanner />
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <div className="rounded-md border border-[#122432] p-4 bg-[#04121a]/60 backdrop-blur-sm">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <div className="text-lg font-semibold text-white">Featured & Highlights</div>
+                            <div className="text-xs text-slate-400">Top picks from your library</div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {builds.slice(0, 4).length === 0 ? (
+                            <div className="p-6 text-slate-400 italic">No builds featured yet.</div>
+                          ) : builds.slice(0, 4).map(b => (
+                            <motion.div 
+                              key={b.id} 
+                              whileHover={{ scale: 1.02 }}
+                              className="rounded-md overflow-hidden border border-[#122432] bg-[#06171f]/60 backdrop-blur-sm flex"
+                            >
+                              <div className="w-40 h-28 overflow-hidden bg-black/20">
+                                {b.coverDataUrl ? <img src={b.coverDataUrl} alt={b.name} className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center text-slate-500 text-[10px]">No Cover</div>}
+                              </div>
+                              <div className="p-3 flex-1">
+                                <div className="font-semibold text-white truncate">{b.name}</div>
+                                <div className="text-xs text-slate-400 mt-1">{getFolderName(b.path)}</div>
+                                <button onClick={() => removeBuild(b.id)} className="mt-3 cursor-pointer px-3 py-1 rounded-md bg-[#0b2a36] text-[10px] text-slate-300 hover:bg-red-900/30 hover:text-red-400 transition-colors">Remove</button>
+                              </div>
+                            </motion.div>
+                          ))}
                         </div>
                       </div>
+                    </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {builds.slice(0, 4).length === 0 ? (
-                          <div className="p-6 text-slate-400">Nothing featured — add builds to your library to feature them here.</div>
-                        ) : builds.slice(0, 4).map(b => (
-                          <div key={b.id} className="rounded-md overflow-hidden border border-[#122432] bg-[#06171f]/60 backdrop-blur-sm flex">
-                            <div className="w-40 h-28 overflow-hidden">{b.coverDataUrl ? <img src={b.coverDataUrl} alt={b.name} className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center text-slate-400">No cover</div>}</div>
-                            <div className="p-3 flex-1">
-                              <div className="font-semibold text-white">{b.name}</div>
-                              <div className="text-xs text-slate-400 mt-1">{getFolderName(b.path)}</div>
-                              <div className="mt-3 flex items-center gap-2">
-                                <button onClick={() => removeBuild(b.id)} className="cursor-pointer px-3 py-1 rounded-md bg-[#0b2a36] text-xs">Remove</button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                    <div>
+                      <div className="rounded-md border border-[#122432] p-4 bg-[#04121a]/60 backdrop-blur-sm">
+                        <div className="text-sm font-semibold text-white">Quick Actions</div>
+                        <div className="mt-3 space-y-2">
+                          <button onClick={() => setActive("library")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36] text-sm text-slate-200 hover:bg-[#0ea5e9]/20 transition-all border border-transparent hover:border-[#0ea5e9]/30">Open Library</button>
+                          <button onClick={() => setActive("news")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36] text-sm text-slate-200 hover:bg-[#0ea5e9]/20 transition-all border border-transparent hover:border-[#0ea5e9]/30">View Patch Notes</button>
+                        </div>
                       </div>
                     </div>
                   </div>
+                </TabTransition>
+              )}
 
-                  <div>
-                    <div className="rounded-md border border-[#122432] p-4 bg-[#04121a]/60 backdrop-blur-sm">
-                      <div className="text-sm font-semibold">Quick Actions</div>
-                      <div className="mt-3 space-y-2">
-                        <button onClick={() => setActive("library")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36]">Open Library</button>
-                        <button onClick={() => setActive("news")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36]">View Patch Notes</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+              {active === "library" && (
+                <TabTransition key="library">
+                  <LibraryPanel />
+                </TabTransition>
+              )}
 
-            {active === "library" && <LibraryPanel />}
-            {active === "news" && <NewsPanel />}
-            {active === "settings" && <SettingsPanel />}
+              {active === "news" && (
+                <TabTransition key="news">
+                  <NewsPanel />
+                </TabTransition>
+              )}
+
+              {active === "settings" && (
+                <TabTransition key="settings">
+                  <SettingsPanel />
+                </TabTransition>
+              )}
+
+              {active === "shop" && (
+                <TabTransition key="shop">
+                  <ShopPanel />
+                </TabTransition>
+              )}
+
+              {active === "leaderboard" && (
+                <TabTransition key="leaderboard">
+                  <LeaderboardPanel />
+                </TabTransition>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>

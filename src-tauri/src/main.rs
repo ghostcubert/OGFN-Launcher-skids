@@ -95,7 +95,7 @@ async fn main() {
         .run(tauri::generate_context!())
         .expect("Fehler beim Start der App");
 
-    solo::run();
+    project::run();
 }
 
 #[tauri::command]
