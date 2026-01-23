@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { open } from "@tauri-apps/api/shell";
 
 const IconEye = (props: any) => (
   <svg viewBox="0 0 24 24" width="20" height="20" {...props}>
@@ -188,8 +189,18 @@ export default function Login() {
             </motion.button>
           </form>
 
-          <div className="mt-6 flex justify-between text-sm text-gray-400">
-          </div>
+
+            <div className="mt-8 text-center">
+              <span className="text-slate-500 text-xs">Don't have an account? </span>
+              <button 
+                type="button" 
+                onClick={() => open("https://example.com")} 
+                className="text-[#0ea5e9] text-xs font-bold hover:underline cursor-pointer"
+              >
+                Create one
+              </button>
+            </div>
+
         </motion.div>
       </div>
     </div>
