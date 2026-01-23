@@ -30,8 +30,8 @@ regex = "1.7"
 mongodb = "2.8"
 ntapi = "0.4.1"
 tauri-plugin-deep-link = { git = "https://github.com/FabianLars/tauri-plugin-deep-link", branch = "main" }
-reqwest = { version = "0.11.3", features = ["stream"] }
-winapi = { version = "0.3", features = ["tlhelp32", "securitybaseapi", "shellapi", "processthreadsapi", "winnt"] }
+reqwest = { version = "0.12", features = ["stream", "blocking"] }
+winapi = { version = "0.3", features = ["tlhelp32", "libloaderapi", "memoryapi", "securitybaseapi", "shellapi", "processthreadsapi", "winnt"] }
 tauri = { version = "1.5", features = [ "api-all"] }
 serde = { version = "1.0", features = ["derive"] }
 window-shadows = "0.2.2"
@@ -47,11 +47,12 @@ num_cpus = "1.0"
 tokio = { version = "1", features = ["full"] }
 sha2 = "0.10.8"
 embed-resource = "1.6"
-windows = { version = "0.48", features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_System_SystemServices", "Win32_System_Threading"] }
+windows = { version = "0.58", features = ["Win32_System_Memory", "Win32_System_ProcessStatus", "Win32_Security", "Win32_System_LibraryLoader", "Win32_Foundation", "Win32_UI_Shell", "Win32_System_SystemServices", "Win32_System_Threading"] }
 zip = "2.2.3"
 lazy_static = "1.5.0"
 winres = "0.1.12"
 time = "0.3.41"
+env = "1.0.1"
 
 [dependencies.async-std]
 version = "1.7.0"
