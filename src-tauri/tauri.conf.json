@@ -33,14 +33,14 @@
     "windows": [
       {
         "fullscreen": false,
-        "maximizable": true,
-        "resizable": true,
+        "maximizable": false,
+        "resizable": false,
         "title": "Project Launcher",
-        "decorations": true,
+        "decorations": false,
         "center": true,
         "transparent": true,
-        "minWidth": 1300,
-        "minHeight": 700
+        "minWidth": 1250,
+        "minHeight": 650
       }
     ],
     "security": {

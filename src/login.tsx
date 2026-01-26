@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { open } from "@tauri-apps/api/shell";
 import { fetch, ResponseType } from "@tauri-apps/api/http";
 import { Defaults } from "./defaults";
+import { Minus, X } from "lucide-react";
+import { appWindow } from "@tauri-apps/api/window";
 
 const IconEye = (props: any) => (
   <svg viewBox="0 0 24 24" width="20" height="20" {...props}>
@@ -24,6 +26,31 @@ interface Credentials {
   email: string;
   password: string;
 }
+
+const CustomTitleBar = () => (
+  <div 
+    data-tauri-drag-region 
+    className="h-8 w-full bg-[#071422]/90 border-b border-white/10 flex justify-between items-center fixed top-0 left-0 z-[999] backdrop-blur-md select-none rounded-t-xl"
+  >
+    <div className="pl-4 flex items-center gap-2 pointer-events-none">
+    </div>
+
+    <div className="flex h-full">
+      <button 
+        onClick={() => appWindow.minimize()}
+        className="px-4 h-full hover:bg-white/10 text-slate-400 transition-colors cursor-pointer"
+      >
+        <Minus size={14} />
+      </button>
+      <button 
+        onClick={() => appWindow.close()}
+        className="px-4 h-full hover:bg-red-600 text-slate-400 hover:text-white transition-colors cursor-pointer rounded-tr-xl"
+      >
+        <X size={14} />
+      </button>
+    </div>
+  </div>
+);
 
 export default function Login() {
   const navigate = useNavigate();
@@ -88,7 +115,9 @@ export default function Login() {
   };
 
   return (
-    <div className="w-screen h-screen relative overflow-hidden text-gray-100 bg-[#0b0c10] select-none">
+    <div className="w-screen h-screen relative overflow-hidden text-gray-100 bg-[#0b0c10] select-none rounded-xl border border-white/10">
+      <CustomTitleBar />
+
       {/* BACKGROUND */}
       <div className="absolute inset-0">
         <img

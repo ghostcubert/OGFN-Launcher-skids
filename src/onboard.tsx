@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { fetch, ResponseType } from "@tauri-apps/api/http";
 import { Defaults } from "./defaults";
 import { motion, AnimatePresence } from "framer-motion";
+import { appWindow, LogicalSize } from "@tauri-apps/api/window"; //
 import {
   Home,
   Grid,
@@ -19,6 +20,8 @@ import {
   User,
   Trophy,
   ShoppingCart,
+  Minus,
+  X
 } from "lucide-react";
 import "./App.css";
 
@@ -57,8 +60,6 @@ type NewsItem = { id: string; title: string; date: string; desc: string; img?: s
 /* -------------------- Component -------------------- */
 export default function Onboard() {
   const navigate = useNavigate();
-
-  // preserved states / logic
   const [active, setActive] = useState<TabKey>("home");
   const [path, setPath] = useState<string | null>(null);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -79,6 +80,15 @@ const TabTransition: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     {children}
   </motion.div>
 );
+
+
+useEffect(() => {
+  const fixSize = async () => {
+    await appWindow.setSize(new LogicalSize(1250, 650));
+  };
+  
+  fixSize();
+}, []);
 
 const LeaderboardPanel: React.FC = () => {
   const [entries, setEntries] = useState<ArenaLeaderboardEntry[]>([]);
@@ -464,6 +474,32 @@ const ShopPanel: React.FC = () => {
     });
   };
 
+
+const CustomTitleBar = () => (
+  <div 
+    data-tauri-drag-region 
+    className="h-8 w-full bg-[#071422]/90 border-b border-[#1e2a38] flex justify-between items-center fixed top-0 left-0 z-[999] backdrop-blur-md select-none rounded-t-xl"
+  >
+    <div className="pl-4 flex items-center gap-2 pointer-events-none">
+    </div>
+
+    <div className="flex h-full">
+      <button 
+        onClick={() => appWindow.minimize()}
+        className="px-4 h-full hover:bg-white/10 text-slate-400 transition-colors cursor-pointer"
+      >
+        <Minus size={14} />
+      </button>
+
+      <button 
+        onClick={() => appWindow.close()}
+        className="px-4 h-full hover:bg-red-600 text-slate-400 hover:text-white transition-colors cursor-pointer rounded-tr-xl"
+        >
+        <X size={14} />
+      </button>
+    </div>
+  </div>
+);
   /* -------------------- UI pieces (Epic-like) -------------------- */
 
 // left nav (compact Epic style)
@@ -692,21 +728,25 @@ const SettingsPanel: React.FC = () => (
 );
 
 /* -------------------- Render main layout -------------------- */
-  return (
+  return (    
+
+
     <div
-      className="w-screen h-screen flex text-slate-100 relative overflow-hidden"
-      style={{
-        backgroundImage: `url('${Defaults.BACKGROUND_URL}')`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
-    >
+      className="w-screen h-screen flex text-slate-100 relative overflow-hidden rounded-xl border border-[#1e2a38]"
+        style={{
+          backgroundImage: `url('${Defaults.BACKGROUND_URL}')`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
       {/* Blurred background overlay */}
-      <div className="absolute inset-0 backdrop-blur-2xl bg-black/50 z-0" />
+      <div className="absolute inset-0 backdrop-blur-2xl bg-black/50 z-0 rounded-xl" />
+
+      <CustomTitleBar />
 
       {/* Main content */}
-      <div className="relative z-10 flex w-full h-full">
+      <div className="relative z-10 flex w-full h-full pt-8">
         <LeftNav />
         <div className="flex-1 flex flex-col">
           <TopBar />
