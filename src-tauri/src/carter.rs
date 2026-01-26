@@ -62,6 +62,11 @@ pub fn kill_epic() {
 
 fn generate_ranges(file_size: u64, worker_count: u64) -> Vec<(u64, u64)> {
     let mut ranges = Vec::new();
+
+    if file_size == 0 || worker_count == 0 {
+        return ranges;
+    }
+
     let chunk_size = file_size / worker_count;
     let mut start = 0;
 
@@ -69,11 +74,14 @@ fn generate_ranges(file_size: u64, worker_count: u64) -> Vec<(u64, u64)> {
         let end = if i == worker_count - 1 {
             file_size - 1
         } else {
-            start + chunk_size - 1
+            start + chunk_size.saturating_sub(1)
         };
 
-        ranges.push((start, end));
-        start = end + 1;
+        if start <= end {
+            ranges.push((start, end));
+        }
+        
+        start = end.saturating_add(1);
     }
 
     ranges
