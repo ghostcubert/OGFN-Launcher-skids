@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { open } from "@tauri-apps/api/shell";
+import { fetch, ResponseType } from "@tauri-apps/api/http";
+import { Defaults } from "./defaults";
 
 const IconEye = (props: any) => (
   <svg viewBox="0 0 24 24" width="20" height="20" {...props}>
@@ -54,17 +56,15 @@ export default function Login() {
         password: form.password,
       });
 
-      const response = await fetch(`http://127.0.0.1:3551/api/launcher/login?${params.toString()}`, {
+      const response = await fetch(`${Defaults.BACKEND_URL}/api/launcher/login?${params.toString()}`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        responseType: ResponseType.Text,
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = JSON.parse(response.data as string);
         
-      if (remember) {
+        if (remember) {
           localStorage.setItem(
             "user",
             JSON.stringify({ 
@@ -76,7 +76,7 @@ export default function Login() {
         }
         navigate("/onboard");
       } else {
-        const errorMessage = await response.text();
+        const errorMessage = response.data as string;
         setError(errorMessage || "An error occurred during login.");
       }
     } catch (err) {
@@ -92,7 +92,7 @@ export default function Login() {
       {/* BACKGROUND */}
       <div className="absolute inset-0">
         <img
-          src="https://i.ibb.co/hx42Ndqt/fn.jpg"
+          src={Defaults.BACKGROUND_URL}
           alt="Launcher Background"
           className="w-full h-full object-cover opacity-30 pointer-events-none"
           draggable={false}
@@ -111,7 +111,7 @@ export default function Login() {
           <div className="flex flex-col items-center space-y-4 mb-6">
             {/* Custom Logo */}
             <img
-              src="https://i.ibb.co/1GVGmGPh/logo.png"
+              src={Defaults.LOGO_URL}
               alt="Custom Logo"
               className="h-10"
               draggable={false}

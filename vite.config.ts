@@ -8,6 +8,10 @@ export default defineConfig(async () => ({
   plugins: [react()],
     build: {
       rollupOptions: {
+        onwarn(warning, warn) {
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return;
+        warn(warning);
+        },
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {

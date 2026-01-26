@@ -1,1 +1,11 @@
-credits to https://github.com/kovryn/Pablos-launcher-leak-an-expose , and Pablo, go star his repository
+## Credits to https://github.com/kovryn/Pablos-launcher-leak-an-expose , and Pablo, go star his repository
+# To start
+Open the "tauri_install.bat"
+Then rename ".env.example" to ".env"
+You can edit name, backend url, discord link, logo image and background image
+For redirect link it can be edited in src-tauri/src/carter.rs in line 358
+Then open src-tauri/tauri.conf.json change "http://localhost:3551/*" to your ip, example "http://123.123.123:3551/*"
+Lastly you can run "tauri_test.bat" to test the launcher
+Or you can run "tauri_build.bat" to build the launcher
+
+Once again credits go to Pablo for making the launcher

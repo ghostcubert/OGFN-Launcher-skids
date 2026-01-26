@@ -4,6 +4,7 @@ use std::fs::create_dir_all;
 use sysinfo::System;
 use tauri::{AppHandle, Manager, Window};
 mod carter;
+use dotenvy::dotenv;
 
 #[derive(Debug)]
 pub struct MyError;
@@ -61,28 +62,31 @@ fn window_close(window: Window) {
 
 #[tokio::main]
 async fn main() {
-    if let Err(e) = create_dir_all("C:\\Program Files\\Project Launcher") {
+    dotenv().ok(); 
+
+    let app_name = env::var("VITE_LAUNCHER_NAME").unwrap_or_else(|_| "Project Launcher".to_string());
+    let path = format!("C:\\Program Files\\{}", app_name);
+
+    if let Err(e) = create_dir_all(&path) {
         eprintln!("Fehler beim Erstellen des Ordners: {}", e);
     }
 
     tauri::Builder::default()
         .setup(|app| {
-            let window = app.get_window("main").unwrap();
-            window.on_window_event(|event| {
-                if let tauri::WindowEvent::CloseRequested { .. } = event {
-                    carter::kill();
-                }
-            });
+            let resource_path = app.path_resolver()
+                .resolve_resource("../.env")
+                .expect("failed to resolve resource");
 
-            #[cfg(not(debug_assertions))]
-            {
-                if let Some(window) = app.get_window("main") {
-                    #[cfg(feature = "devtools")]
-                    {
-                        window.close_devtools();
+            dotenvy::from_path(resource_path).ok();
+
+            if let Some(window) = app.get_window("main") {
+                window.on_window_event(|event| {
+                    if let tauri::WindowEvent::CloseRequested { .. } = event {
+                        carter::kill(); 
                     }
-                }
+                });
             }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

@@ -5,6 +5,8 @@ import { open } from "@tauri-apps/api/dialog";
 import { readBinaryFile, exists } from "@tauri-apps/api/fs";
 import { join } from "@tauri-apps/api/path";
 import { useNavigate } from "react-router-dom";
+import { fetch, ResponseType } from "@tauri-apps/api/http";
+import { Defaults } from "./defaults";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
@@ -83,16 +85,24 @@ const LeaderboardPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:3551/api/launcher/leaderboard")
-      .then((res) => res.json())
-      .then((data) => {
-        setEntries(data);
+    const fetchLeaderboard = async () => {
+      try {
+        const response = await fetch(`${Defaults.BACKEND_URL}/api/launcher/leaderboard`, {
+          method: 'GET',
+          responseType: ResponseType.JSON,
+        });
+
+        if (response.ok) {
+          setEntries(response.data as ArenaLeaderboardEntry[]);
+        }
+      } catch (err) {
+        console.error("Leaderboard Error:", err);
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Leaderboard fetch error:", err);
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchLeaderboard();
   }, []);
 
   const getRankStyle = (index: number) => {
@@ -174,20 +184,29 @@ const ShopPanel: React.FC = () => {
   useEffect(() => {
     const fetchShop = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:3551/api/launcher/shop");
-        const data = await res.json();
+        const res = await fetch(`${Defaults.BACKEND_URL}/api/launcher/shop`, {
+          method: 'GET',
+          responseType: ResponseType.JSON
+        });
+
+        if (!res.ok) throw new Error("Shop fetch failed");
+        
+        const data = res.data as any;
         setShopData(data);
 
-        // Collect all IDs from both sections for the image API
         const allItems = [...data.featured, ...data.daily];
         const cosmeticMap: Record<string, CosmeticInfo> = {};
 
         await Promise.all(allItems.map(async (item) => {
           const rawId = item.itemGrants[0].split(":")[1];
           try {
-            const apiRes = await fetch(`https://fortnite-api.com/v2/cosmetics/br/${rawId}`);
-            const apiData = await apiRes.json();
-            if (apiData.status === 200) {
+            const apiRes = await fetch(`https://fortnite-api.com/v2/cosmetics/br/${rawId}`, {
+                method: 'GET',
+                responseType: ResponseType.JSON
+            });
+            
+            const apiData = apiRes.data as any;
+            if (apiRes.ok && apiData.status === 200) {
               cosmeticMap[rawId] = {
                 id: apiData.data.id,
                 name: apiData.data.name,
@@ -196,16 +215,19 @@ const ShopPanel: React.FC = () => {
                 rarity: apiData.data.rarity.value,
               };
             }
-          } catch (e) { console.warn("Missing info for", rawId); }
+          } catch (e) {
+            console.warn("Failed to fetch info for", rawId);
+          }
         }));
 
         setCosmetics(cosmeticMap);
+      } catch (err) {
+        console.error("Shop Error:", err);
+      } finally {
         setLoading(false);
-      } catch (err) { 
-        console.error("Shop error:", err);
-        setLoading(false); 
       }
     };
+
     fetchShop();
   }, []);
 
@@ -451,13 +473,13 @@ const LeftNav: React.FC = () => (
       {/* Custom logo image */}
       <div className="w-10 h-10 rounded-md overflow-hidden">
         <img
-          src="https://i.ibb.co/1GVGmGPh/logo.png" // replace with your logo path or import
+          src={Defaults.LOGO_URL}
           alt="Logo"
           className="w-full h-full object-cover"
         />
       </div>
       <div className="flex-1">
-        <div className="text-sm text-white font-semibold">Project</div>
+        <div className="text-sm text-white font-semibold">{Defaults.LAUNCHER_NAME}</div>
         <div className="text-xs text-slate-300">Launcher</div>
       </div>
       <div className="text-slate-400 text-xs"></div>
@@ -674,7 +696,7 @@ const SettingsPanel: React.FC = () => (
     <div
       className="w-screen h-screen flex text-slate-100 relative overflow-hidden"
       style={{
-        backgroundImage: "url('https://i.ibb.co/hx42Ndqt/fn.jpg')",
+        backgroundImage: `url('${Defaults.BACKGROUND_URL}')`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

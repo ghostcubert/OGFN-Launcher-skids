@@ -355,10 +355,15 @@ async fn dll_replace(path: &str, app: AppHandle) -> Result<bool, String> {
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
 
+    let full_url = "https://github.com/lalaland1212/LocalDLL127001/raw/refs/heads/main/Starfall.dll";
+
+    let filename = full_url.split('/').last().unwrap_or("file.dll");
+    let base_url = full_url.replace(filename, "");
+
     let _ = download(
-        "https://github.com/lalaland1212/LocalDLL127001/raw/refs/heads/main/",
-        "Starfall.dll",
-        nvidia_path.clone().to_str().unwrap(),
+        &base_url,
+        filename,
+        nvidia_path.clone().to_str().unwrap_or("C:\\Default\\Path"),
         &window,
     )
     .await;

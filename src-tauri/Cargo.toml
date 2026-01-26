@@ -1,8 +1,8 @@
 [package]
 name = "projectlauncher"
-version = "1.0.20"
-description = "project Launcher"
-authors = ["secret_Project"]
+version = "1.0.0"
+description = "project launcher"
+authors = ["Project"]
 edition = "2021"
 build = "build.rs"
 
@@ -20,6 +20,7 @@ tauri-build = { version = "1.5", features = [] }
 winres = "0.1"
 
 [dependencies]
+dotenvy = "0.15"
 discord-rpc-client = "^0.4"
 libloading = "0.8"
 uuid = "1.14.0"
