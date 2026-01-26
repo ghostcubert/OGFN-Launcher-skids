@@ -14,7 +14,7 @@
       "http": {
         "all": true,
         "request": true,
-        "scope": ["http://localhost:3551/*", "http://127.0.0.1:3551/*", "https://fortnite-api.com/*"]
+        "scope": ["http://123.123.123:3551/*", "http://127.0.0.1:3551/*", "https://fortnite-api.com/*"]
       },
       "shell": {
         "all": true,
@@ -49,7 +49,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.project.app",
+      "identifier": "com.project.launcher",
       "icon": [
         "icons/icon.icns",
         "icons/logo.ico"
