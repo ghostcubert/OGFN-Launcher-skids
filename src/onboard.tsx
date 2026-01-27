@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { fetch, ResponseType } from "@tauri-apps/api/http";
 import { Defaults } from "./defaults";
 import { motion, AnimatePresence } from "framer-motion";
-import { appWindow, LogicalSize } from "@tauri-apps/api/window"; //
+import { appWindow } from "@tauri-apps/api/window"; //
 import {
   Home,
   Grid,
@@ -17,7 +17,6 @@ import {
   Play,
   Plus,
   Trash2,
-  User,
   Trophy,
   ShoppingCart,
   Minus,
@@ -25,10 +24,20 @@ import {
 } from "lucide-react";
 import "./App.css";
 
+interface UserData {
+  email: string;
+  password?: string;
+  username?: string;
+  discordId?: string;
+  avatarHash?: string | null;
+}
+
 interface ArenaLeaderboardEntry {
   username: string;
   hype: number;
   division: number;
+  discordId?: string;
+  avatarHash?: string;
 }
 
 interface CosmeticInfo {
@@ -54,12 +63,14 @@ function getFolderName(p: string) {
 }
 
 /* -------------------- Types -------------------- */
-type TabKey = "home" | "library" | "news" | "settings" | "shop" |"leaderboard";
+type TabKey = "home" | "library" | "news" | "shop" | "settings" | "leaderboard";
 type BuildItem = { id: string; path: string; name: string; coverDataUrl?: string };
 type NewsItem = { id: string; title: string; date: string; desc: string; img?: string };
 /* -------------------- Component -------------------- */
 export default function Onboard() {
   const navigate = useNavigate();
+
+  // preserved states / logic
   const [active, setActive] = useState<TabKey>("home");
   const [path, setPath] = useState<string | null>(null);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -81,104 +92,146 @@ const TabTransition: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   </motion.div>
 );
 
-
-useEffect(() => {
-  const fixSize = async () => {
-    await appWindow.setSize(new LogicalSize(1250, 650));
-  };
-  
-  fixSize();
-}, []);
-
 const LeaderboardPanel: React.FC = () => {
   const [entries, setEntries] = useState<ArenaLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const response = await fetch(`${Defaults.BACKEND_URL}/api/launcher/leaderboard`, {
-          method: 'GET',
-          responseType: ResponseType.JSON,
-        });
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await fetch(`${Defaults.BACKEND_URL}/api/launcher/leaderboard`, {
+        method: 'GET',
+        responseType: ResponseType.JSON,
+      });
 
-        if (response.ok) {
-          setEntries(response.data as ArenaLeaderboardEntry[]);
-        }
-      } catch (err) {
-        console.error("Leaderboard Error:", err);
-      } finally {
-        setLoading(false);
+      if (response.ok) {
+        setEntries(response.data as ArenaLeaderboardEntry[]);
       }
-    };
+    } catch (err) {
+      console.error("Leaderboard Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchLeaderboard();
+
+    // Refresh every 10 minutes (600,000 ms)
+    const interval = setInterval(fetchLeaderboard, 600000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const getRankStyle = (index: number) => {
-    if (index === 0) return { icon: "🥇", color: "text-yellow-400", bg: "bg-yellow-400/10" };
-    if (index === 1) return { icon: "🥈", color: "text-slate-300", bg: "bg-slate-300/10" };
-    if (index === 2) return { icon: "🥉", color: "text-amber-600", bg: "bg-amber-600/10" };
-    return { icon: `#${index + 1}`, color: "text-slate-500", bg: "bg-transparent" };
+    if (index === 0) return { icon: "🥇", color: "text-yellow-400", bg: "bg-yellow-400/10", border: "border-yellow-400/20" };
+    if (index === 1) return { icon: "🥈", color: "text-slate-300", bg: "bg-slate-300/10", border: "border-slate-300/20" };
+    if (index === 2) return { icon: "🥉", color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" };
+    return { icon: `#${index + 1}`, color: "text-slate-500", bg: "bg-transparent", border: "border-transparent" };
   };
 
   return (
-    <div className="max-w-5xl mx-auto animate-in fade-in duration-500">
+    <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* Header Section */}
+      <div className="flex items-center justify-between mb-6 px-1">
+        <div>
+          <div className="text-2xl font-black text-white uppercase tracking-tighter italic">Global Arena</div>
+          <div className="text-[10px] text-slate-500 font-bold tracking-[0.2em] mt-0.5 uppercase opacity-80">Ranked Leaderboards</div>
+        </div>
+      </div>
 
-      {/* Border color #122432 matches your News and Hero cards */}
-      <div className="rounded-xl border border-[#122432] bg-[#04121a]/60 backdrop-blur-sm overflow-hidden shadow-2xl">
+      <div className="rounded-2xl border border-white/10 bg-[#0b1724]/60 backdrop-blur-xl overflow-hidden shadow-2xl">
         <table className="w-full text-left border-collapse">
           <thead>
-            {/* Header row now uses #071422 background to match your TopBar */}
-            <tr className="bg-[#071422]/80 text-slate-400 text-xs uppercase tracking-widest border-b border-[#122432]">
-              <th className="px-8 py-5 font-bold">Rank</th>
-              <th className="px-8 py-5 font-bold">Player</th>
-              <th className="px-8 py-5 font-bold">Division</th>
-              <th className="px-8 py-5 font-bold text-right">Hype</th>
+            <tr className="bg-black/40 text-slate-500 text-[10px] uppercase tracking-[0.2em] border-b border-white/5">
+              <th className="px-8 py-4 font-black">Rank</th>
+              <th className="px-8 py-4 font-black">Player</th>
+              <th className="px-8 py-4 font-black">Division</th>
+              <th className="px-8 py-4 font-black text-right">Hype</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#122432]">
+          
+          <tbody className="divide-y divide-white/[0.03]">
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-8 py-20 text-center text-slate-500">
-                   <div className="flex flex-col items-center gap-2">
-                    <div className="w-6 h-6 border-2 border-[#0ea5e9] border-t-transparent rounded-full animate-spin" />
-                    <span>Syncing Rankings...</span>
+                <td colSpan={4} className="px-8 py-32 text-center">
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                </td>
+              </tr>
+            ) : entries.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="p-4">
+                  {/* Container: Matches Library/Shop py-24, border-white/20, and bg-white/[0.03] */}
+                  <div className="py-24 border-2 border-dashed border-white/20 rounded-2xl bg-white/[0.03] flex flex-col items-center justify-center transition-colors hover:border-white/30">
+                    
+                    {/* Icon Container: Matches w-14/h-14, bg-white/10, and text-slate-300 */}
+                    <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mb-4 text-slate-300 shadow-inner">
+                      <Trophy size={28} />
+                    </div>
+                    
+                    {/* Title: Matches text-slate-300 text-sm font-medium */}
+                    <p className="text-slate-300 text-sm font-medium">
+                      Leaderboard Unavailable
+                    </p>
+                    
+                    {/* Subtitle: Matches text-slate-500 text-xs mt-1 */}
+                    <p className="text-slate-500 text-xs mt-1">
+                      Arena rankings are currently being calculated or offline.
+                    </p>
                   </div>
                 </td>
               </tr>
-            ) : entries.map((player, index) => {
-              const rank = getRankStyle(index);
-              return (
-                <tr key={index} className="hover:bg-white/[0.02] transition-colors group">
-                  <td className="px-8 py-5">
-                    <span className={`text-lg font-bold ${rank.color}`}>
-                      {rank.icon}
-                    </span>
-                  </td>
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-3">
-                      {/* Avatar bg matches your LeftNav profile icon */}
-                      <div className="w-8 h-8 rounded-full bg-[#16303e] flex items-center justify-center text-xs font-bold text-white uppercase">
-                        {player.username[0]}
+            ) : (
+              entries.map((player, index) => {
+                const rank = getRankStyle(index);
+                return (
+                  <tr key={index} className="hover:bg-white/[0.01] transition-colors group">
+                    {/* Rank */}
+                    <td className="px-8 py-5">
+                      <div className={`inline-flex items-center justify-center w-9 h-9 rounded-lg font-black text-xs ${rank.bg} ${rank.color} border ${rank.border}`}>
+                        {rank.icon}
                       </div>
-                      <span className="font-bold text-slate-200 group-hover:text-[#0ea5e9] transition-colors">
-                        {player.username}
+                    </td>
+
+                    {/* Competitor */}
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-9 h-9 rounded-xl border border-white/10 overflow-hidden bg-[#071422] flex items-center justify-center shadow-lg">
+                          {player.discordId && player.avatarHash ? (
+                            <img 
+                              src={`https://cdn.discordapp.com/avatars/${player.discordId}/${player.avatarHash}.png?size=64`} 
+                              alt={player.username}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <span className="text-xs font-black text-blue-400">{player.username[0]}</span>
+                          )}
+                        </div>
+                        <span className="font-bold text-slate-200 group-hover:text-blue-400 transition-colors tracking-tight">
+                          {player.username}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Division - Just the number now */}
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-2">
+                         <span className="text-sm font-black text-slate-400 tracking-tighter italic">DIV</span>
+                         <span className="text-lg font-black text-white italic tracking-tighter leading-none">{player.division}</span>
+                      </div>
+                    </td>
+
+                    {/* Hype - Matching the high-contrast font style */}
+                    <td className="px-8 py-5 text-right">
+                      <span className="font-black text-blue-400 text-xl tracking-tighter tabular-nums drop-shadow-[0_0_10px_rgba(59,130,246,0.2)]">
+                        {player.hype.toLocaleString()}
                       </span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-5">
-                    {/* Badge colors match the "EOR" toggle style */}
-                    <span className="px-2 py-1 rounded bg-[#0b2a36] border border-[#122432] text-slate-300 text-[10px] font-black uppercase">
-                      Div {player.division}
-                    </span>
-                  </td>
-                  <td className="px-8 py-5 text-right font-mono font-black text-[#0ea5e9] text-lg">
-                    {player.hype.toLocaleString()}
-                  </td>
-                </tr>
-              );
-            })}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -241,75 +294,110 @@ const ShopPanel: React.FC = () => {
     fetchShop();
   }, []);
 
-  const getRarityColor = (rarity: string) => {
+  const getRarityStyle = (rarity: string) => {
     switch (rarity?.toLowerCase()) {
-      case "legendary": return "border-yellow-400 bg-yellow-400/10 text-yellow-400";
-      case "epic": return "border-purple-400 bg-purple-400/10 text-purple-400";
-      case "rare": return "border-blue-400 bg-blue-400/10 text-blue-400";
-      case "uncommon": return "border-green-400 bg-green-400/10 text-green-400";
-      default: return "border-[#122432] bg-slate-500/10 text-slate-300";
+      case "legendary": return { border: "border-orange-500/40", text: "text-orange-400", bg: "from-orange-500/20" };
+      case "epic": return { border: "border-purple-500/40", text: "text-purple-400", bg: "from-purple-500/20" };
+      case "rare": return { border: "border-blue-500/40", text: "text-blue-400", bg: "from-blue-500/20" };
+      case "uncommon": return { border: "border-green-500/40", text: "text-green-400", bg: "from-green-500/20" };
+      default: return { border: "border-white/10", text: "text-slate-400", bg: "from-slate-500/10" };
     }
   };
 
   const RenderSection = (title: string, items: any[]) => (
-    <div className="mb-12">
-      <div className="flex items-center gap-4 mb-6">
-        <h3 className="text-xl font-black text-white uppercase tracking-[0.2em]">{title}</h3>
-        <div className="h-[1px] flex-1 bg-gradient-to-r from-pink-500/40 to-transparent" />
-      </div>
-      
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {items.map((entry) => {
-          const rawId = entry.itemGrants[0].split(":")[1];
-          const info = cosmetics[rawId];
-          const rarityStyle = getRarityColor(info?.rarity);
-
-          return (
-            <motion.div 
-              key={entry.id}
-              whileHover={{ y: -4 }}
-              className={`relative group rounded-xl overflow-hidden border-2 bg-[#04121a]/80 backdrop-blur-sm transition-colors ${info ? rarityStyle.split(" ")[0] : "border-[#122432]"}`}
-            >
-              <div className="aspect-[3/4] overflow-hidden relative bg-[#071422]">
-                <div className={`absolute inset-0 opacity-20 ${info ? rarityStyle.split(" ")[1].replace("/10", "/40") : ""}`} />
-                <img 
-                  src={info?.image || "https://i.imgur.com/Z2s5ngZ.png"} 
-                  alt={info?.name} 
-                  className="w-full h-full object-cover relative z-10" 
-                />
-                <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 to-transparent z-20">
-                  <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${info ? rarityStyle.split(" ")[2] : "text-slate-400"}`}>
-                    {info?.rarity || "Common"}
-                  </div>
-                  <div className="font-bold text-white leading-tight truncate">{info?.name || rawId}</div>
-                </div>
-              </div>
-              <div className="p-3 bg-[#071422] flex items-center gap-1">
-                <img src="https://i.imgur.com/pfmvUEu.png" className="w-4 h-4" alt="V" />
-                <span className="font-bold text-white">{entry.price}</span>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+  <div className="mb-12">
+    <div className="flex items-center gap-6 mb-6 px-1">
+      <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">{title}</h3>
+      <div className="h-[1px] flex-1 bg-gradient-to-r from-white/10 to-transparent" />
     </div>
-  );
+    
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+      {items.map((entry) => {
+        const rawId = entry.itemGrants[0].split(":")[1];
+        const info = cosmetics[rawId];
+        const style = getRarityStyle(info?.rarity);
+
+        return (
+          <div 
+            key={entry.id}
+            className={`group relative rounded-xl overflow-hidden bg-[#0b1724] border transition-all duration-300 transform-gpu ${style.border}`}
+          >
+            <div className="aspect-square overflow-hidden relative bg-[#071422]">
+              <div className={`absolute inset-0 bg-gradient-to-t ${style.bg} to-transparent opacity-20 z-0`} />
+              
+              {info?.image ? (
+                <img 
+                  src={info.image} 
+                  /* Hide image until it's ready to prevent 'line circle' artifacts */
+                  onLoad={(e) => e.currentTarget.classList.remove('opacity-0')}
+                  className="w-full h-full object-contain relative z-10 p-2 transition-all duration-500 group-hover:scale-105 opacity-0" 
+                />
+              ) : (
+                <div className="w-full h-full bg-[#071422]" />
+              )}
+              
+              <div className="absolute top-2 right-2 z-30 px-2 py-1 rounded-md bg-black/70 backdrop-blur-md flex items-center gap-1.5 border border-white/5">
+                <img src="https://i.imgur.com/pfmvUEu.png" className="w-3 h-3" alt="V" />
+                <span className="text-[11px] font-bold text-white tracking-tighter">{entry.price}</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-black/20">
+              <div className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${style.text}`}>
+                {info?.rarity || "Loading..."}
+              </div>
+              <div className="font-bold text-white text-[11px] truncate uppercase">
+                {info?.name || "..."}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 0;
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-40 w-full bg-transparent">
+        <div className="w-8 h-8 border-2 border-white/5 border-t-blue-500 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="animate-in fade-in duration-500">
-      {shopData.featured.length > 0 && RenderSection("Featured", shopData.featured)}
-      {shopData.daily.length > 0 && RenderSection("Daily", shopData.daily)}
-      
-      {shopData.featured.length === 0 && shopData.daily.length === 0 && (
-        <div className="text-center text-slate-500 italic py-20">Shop is empty.</div>
+    <div className="w-full h-full relative bg-transparent outline-none ring-0">
+      {!isShopEmpty ? (
+        <div className="px-1 pb-10">
+          {shopData.featured.length > 0 && RenderSection("Featured", shopData.featured)}
+          {shopData.daily.length > 0 && RenderSection("Daily", shopData.daily)}
+        </div>
+      ) : (
+        <div className="w-full flex justify-center items-start pt-10">
+          {/* Matches Library empty state exactly */}
+          <div className="w-full max-w-2xl px-4">
+            <div className="py-24 border-2 border-dashed border-white/20 rounded-2xl bg-white/[0.03] flex flex-col items-center justify-center transition-colors hover:border-white/30">
+              
+              {/* Icon Container: matches w-14/h-14 and bg-white/10 */}
+              <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mb-4 text-slate-300 shadow-inner">
+                <ShoppingCart size={28} />
+              </div>
+
+              {/* Title: matches text-slate-300 text-sm font-medium */}
+              <p className="text-slate-300 text-sm font-medium">
+                Shop Unavailable
+              </p>
+
+              {/* Subtitle: matches text-slate-500 text-xs mt-1 */}
+              <p className="text-slate-500 text-xs mt-1">
+                Connection to the item store was lost. Please check back later.
+              </p>
+
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -430,8 +518,8 @@ const ShopPanel: React.FC = () => {
         setTimeout(() => setError(null), 5000);
         return;
       }
-      if (builds.length >= 16) {
-        setError("Maximum builds in library reached (16). Remove one first.");
+      if (builds.length >= 2) {
+        setError("Maximum builds in library reached (2). Remove one first.");
         setTimeout(() => setError(null), 5000);
         return;
       }
@@ -478,7 +566,7 @@ const ShopPanel: React.FC = () => {
 const CustomTitleBar = () => (
   <div 
     data-tauri-drag-region 
-    className="h-8 w-full bg-[#071422]/90 border-b border-[#1e2a38] flex justify-between items-center fixed top-0 left-0 z-[999] backdrop-blur-md select-none rounded-t-xl"
+    className="h-8 w-full bg-[#071422]/90 border-b border-white/10 flex justify-between items-center fixed top-0 left-0 z-[999] backdrop-blur-md select-none rounded-t-xl"
   >
     <div className="pl-4 flex items-center gap-2 pointer-events-none">
     </div>
@@ -490,11 +578,10 @@ const CustomTitleBar = () => (
       >
         <Minus size={14} />
       </button>
-
       <button 
         onClick={() => appWindow.close()}
         className="px-4 h-full hover:bg-red-600 text-slate-400 hover:text-white transition-colors cursor-pointer rounded-tr-xl"
-        >
+      >
         <X size={14} />
       </button>
     </div>
@@ -503,87 +590,121 @@ const CustomTitleBar = () => (
   /* -------------------- UI pieces (Epic-like) -------------------- */
 
 // left nav (compact Epic style)
-const LeftNav: React.FC = () => (
-  <div className="w-72 bg-[#0b1724]/70 border-r border-[#1e2a38] flex flex-col backdrop-blur-sm">
-    <div className="px-4 py-3 flex items-center gap-3 border-b border-[#14202b]">
-      {/* Custom logo image */}
-      <div className="w-10 h-10 rounded-md overflow-hidden">
-        <img
-          src={Defaults.LOGO_URL}
-          alt="Logo"
-          className="w-full h-full object-cover"
-        />
-      </div>
-      <div className="flex-1">
-        <div className="text-sm text-white font-semibold">{Defaults.LAUNCHER_NAME}</div>
-        <div className="text-xs text-slate-300">Launcher</div>
-      </div>
-      <div className="text-slate-400 text-xs"></div>
-    </div>
-
-    <nav className="p-3 space-y-1 flex-1">
-      <NavItem icon={<Home size={18} />} label="Home" active={active === "home"} onClick={() => setActive("home")} />
-      <NavItem icon={<Grid size={18} />} label="Library" active={active === "library"} onClick={() => setActive("library")} />
-      <NavItem icon={<ShoppingCart size={18} />} label="Shop" active={active === "shop"} onClick={() => setActive("shop")} />
-      <NavItem icon={<Trophy size={18} />} label="Leaderboard" active={active === "leaderboard"} onClick={() => setActive("leaderboard")} />
-
-      <div className="mt-4 border-t border-[#14202b] pt-3">
-        <NavItem icon={<Settings size={18} />} label="Settings" active={active === "settings"} onClick={() => setActive("settings")} />
-      </div>
-    </nav>
-
-    <div className="p-3 border-t border-[#14202b]">
-      <div className="bg-[#071018]/70 p-3 rounded-md flex items-center gap-3 backdrop-blur-sm">
-        <div className="w-9 h-9 rounded-full bg-[#16303e] grid place-items-center text-sm text-white">
-          {user?.email ? user.email[0].toUpperCase() : "–"}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm text-white truncate">{user?.email ?? "Not signed in"}</div>
-          <div className="text-xs text-slate-400">EOR: {EOR ? "On" : "Off"}</div>
-        </div>
-        <button onClick={handleLogout} className="cursor-pointer ml-2 px-2 py-1 rounded-md bg-[#2b4754] text-xs text-white hover:bg-[#334d5b]">
-          <LogOut size={14} />
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-  function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void; }) {
-  return (
-    <motion.button 
-      onClick={onClick} 
-      whileHover={{ x: 4 }}
-      whileTap={{ scale: 0.97 }}
-      className={`cursor-pointer w-full text-left px-3 py-2 rounded-md flex items-center gap-3 transition-all duration-200 ${
-        active 
-          ? "bg-gradient-to-r from-[#0ea5e9]/20 to-[#13222b] ring-1 ring-[#0ea5e9]/40 text-white" 
-          : "text-slate-400 hover:bg-[#071422]/60 hover:text-slate-200"
-      }`}
-    >
-      <div className={`w-7 h-7 grid place-items-center transition-colors ${active ? "text-[#0ea5e9]" : "text-slate-400"}`}>
-        {icon}
-      </div>
-      <div className="text-sm font-medium">{label}</div>
-    </motion.button>
-  );
+interface LeftNavProps {
+  active: TabKey;
+  setActive: (val: TabKey) => void;
+  user: UserData | null;
+  EOR: boolean;
+  handleLogout: () => void;
 }
 
-/* Top bar (Epic-like) */
-const TopBar: React.FC = () => (
-  <div className="flex items-center justify-between px-6 py-3 bg-[#071422]/75 border-b border-[#0f1b26] backdrop-blur-sm">
-    <div className="flex items-center gap-4">
-      {/* Search bar removed */}
+const LeftNav: React.FC<LeftNavProps> = ({ active, setActive, user, handleLogout }) => (
+<div className="w-72 bg-[#0b1724]/95 border-r border-white/5 flex flex-col pt-8 backdrop-blur-md relative z-20">
+  {/* Logo Section */}
+  <div className="px-6 pb-8 flex items-center gap-4">
+    <div className="w-12 h-12 rounded-xl bg-[#07080a] border border-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(14,165,233,0.15)] overflow-hidden relative">
+      <img 
+        src={Defaults.LOGO_URL} 
+        alt="Logo" 
+        className="w-full h-full object-cover transition-transform duration-500 hover:scale-110" 
+      />
+      <div className="absolute inset-0 border border-blue-500/10 rounded-xl pointer-events-none" />
     </div>
+    
+    <div>
+      <div className="text-sm font-bold text-white tracking-wide">{Defaults.LAUNCHER_NAME}</div>
+      <div className="text-[10px] text-blue-400 font-bold tracking-widest uppercase opacity-80">Launcher</div>
+    </div>
+  </div>
 
-    <div className="flex items-center gap-3">
-      <div className="h-8 w-8 rounded-full bg-[#0f2940] grid place-items-center text-slate-200"><User size={16} /></div>
-      <div className="hidden sm:block text-slate-400 text-xs">{user?.email ?? "guest@local"}</div>
-      <div className="flex gap-2">
+    {/* Navigation */}
+    <nav className="px-3 space-y-1 flex-1">
+      <NavItem icon={<Home size={18} />} label="Home" id="home" active={active} setActive={setActive} />
+      <NavItem icon={<Grid size={18} />} label="Library" id="library" active={active} setActive={setActive} />
+      <NavItem icon={<ShoppingCart size={18} />} label="Shop" id="shop" active={active} setActive={setActive} />
+      <NavItem icon={<Trophy size={18} />} label="Leaderboard" id="leaderboard" active={active} setActive={setActive} />
+      
+      <div className="my-4 mx-4 h-px bg-white/5" />
+      
+      <NavItem icon={<Settings size={18} />} label="Settings" id="settings" active={active} setActive={setActive} />
+    </nav>
+
+    {/* Bottom Profile */}
+    <div className="p-4 mt-auto border-t border-white/5 bg-[#081018]/50">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-full border border-blue-500/20 overflow-hidden bg-[#16303e]">
+           <img 
+             src={user?.discordId && user?.avatarHash 
+               ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatarHash}.png?size=64`
+               : `https://ui-avatars.com/api/?name=${user?.username || 'G'}&background=0ea5e9&color=fff`
+             } 
+             className="w-full h-full object-cover" 
+           />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs text-white font-bold truncate">{user?.email ?? "Guest"}</div>
+        </div>
+      <button 
+        onClick={handleLogout} 
+        className="cursor-pointer p-2 text-slate-500 hover:text-red-500 transition-colors"
+      >
+        <LogOut size={16} />
+      </button>
       </div>
     </div>
   </div>
 );
+
+const NavItem = ({ icon, label, id, active, setActive }: any) => {
+  const isActive = active === id;
+  return (
+    <button
+      onClick={() => setActive(id)}
+      className={`cursor-pointer relative w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-300 group z-10 ${isActive ? "text-white" : "text-slate-400 hover:text-slate-200"}`}
+    >
+      {isActive && (
+        <motion.div
+          layoutId="activeTab"
+          className="absolute inset-0 bg-[#1e293b] rounded-lg border border-blue-500/30 shadow-[0_0_15px_rgba(14,165,233,0.1)] -z-10"
+          initial={false}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        />
+      )}
+      <span className={isActive ? "text-blue-400" : "group-hover:text-white transition-colors"}>{icon}</span>
+      <span className="text-sm font-medium tracking-wide">{label}</span>
+    </button>
+  );
+};
+
+/* Top bar (Epic-like) */
+interface TopBarProps {
+  user: UserData | null;
+}
+
+const TopBar: React.FC<TopBarProps> = ({ user }) => {
+  return (
+    <div className="flex items-center justify-between px-6 py-3 bg-[#071422]/75 border-b border-[#0f1b26] backdrop-blur-sm">
+      <div /> {/* Spacer */}
+      <div className="flex items-center gap-3">
+        <div className="text-right hidden sm:block">
+          <div className="text-xs font-bold text-white uppercase tracking-wider">
+            {user?.username ?? "Guest"}
+          </div>
+        </div>
+        <div className="h-8 w-8 rounded-full border border-[#0ea5e9]/30 overflow-hidden bg-[#0f2940]">
+          <img 
+            src={user?.discordId && user?.avatarHash 
+              ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatarHash}.png?size=64`
+              : `https://ui-avatars.com/api/?name=${user?.username || 'G'}&background=0ea5e9&color=fff`
+            } 
+            className="w-full h-full object-cover" 
+            alt="pfp"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
 
   /* Hero carousel / featured area (Epic-like big banner) */
   const HeroBanner: React.FC = () => {
@@ -591,7 +712,7 @@ const TopBar: React.FC = () => (
     return (
       <div className="mb-6">
         <div className="relative rounded-xl overflow-hidden border border-[#122432] bg-[#000000]/10 backdrop-blur-sm">
-          <img src="https://i.imgur.com/CPdmKDe.jpeg" className="w-full h-64 object-cover brightness-75" />
+          <img src={Defaults.PLACEHOLDER_IMAGE} className="w-full h-64 object-cover brightness-75" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#04121a]/80" />
           <div className="absolute left-8 bottom-8 right-8 flex items-center gap-6">
             <div className="flex-1">
@@ -634,40 +755,87 @@ const TopBar: React.FC = () => (
 
   /* Library styled like Epic store grid */
   const LibraryPanel: React.FC = () => (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="text-xl font-black text-white uppercase tracking-[0.2em]">Library</div>
-          <div className="text-xs text-slate-400">Your builds & installs</div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={addBuild} className="cursor-pointer px-3 py-2 rounded-md bg-[#0f3342]/80 text-slate-200 flex items-center gap-2"><Plus size={14} /> Add Build</button>
-        </div>
+  <div className="animate-in fade-in duration-500">
+    <div className="flex items-center justify-between mb-6 px-1">
+      <div>
+        <div className="text-xl font-black text-white uppercase tracking-[0.2em] drop-shadow-sm">Library</div>
+        <div className="text-[10px] text-slate-400 font-bold tracking-[0.15em] mt-1 uppercase opacity-70">Build Management</div>
       </div>
+      
+      <button 
+        onClick={addBuild} 
+        className="cursor-pointer px-5 py-2 rounded-lg bg-[#0b2a36] hover:bg-[#123a4a] text-slate-200 text-xs font-bold border border-white/10 hover:border-blue-500/40 transition-all duration-300 flex items-center gap-2 active:scale-95 shadow-lg"
+      >
+        <Plus size={14} strokeWidth={3} /> ADD BUILD
+      </button>
+    </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {builds.length === 0 ? (
-          <div className="col-span-full p-6 bg-[#04121a]/60 rounded-md text-slate-400">No builds yet. Click 'Add Build' to import an installation folder containing an Engine folder.</div>
-        ) : builds.map((b) => {
+    {/* Grid Section */}
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+      {builds.length === 0 ? (
+        /* Enhanced High-Visibility Dashed Box */
+        <div className="col-span-full py-24 border-2 border-dashed border-white/20 rounded-2xl bg-white/[0.03] flex flex-col items-center justify-center transition-colors hover:border-white/30">
+          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mb-4 text-slate-300 shadow-inner">
+            <Grid size={28} />
+          </div>
+          <p className="text-slate-300 text-sm font-medium">No builds found in your directory</p>
+          <p className="text-slate-500 text-xs mt-1">Click 'Add Build' to start your collection</p>
+        </div>
+      ) : (
+        builds.map((b) => {
           const selected = b.path === path;
           return (
-            <motion.div key={b.id} whileHover={{ scale: 1.02 }} className={`rounded-md overflow-hidden ${selected ? "ring-2 ring-[#0ea5e9]/30" : "border-[#122432]"} bg-[#05131a]/60 backdrop-blur-sm`}>
-              <div className="h-40 bg-[#071823]/60 flex items-center justify-center overflow-hidden">
-                {b.coverDataUrl ? <img src={b.coverDataUrl} alt={b.name} className="w-full h-full object-cover" /> : <div className="text-xs text-slate-400">No cover</div>}
+            <div 
+              key={b.id} 
+              className={`group relative rounded-xl overflow-hidden bg-[#0b1724]/60 border backdrop-blur-md transition-all duration-500 ease-out transform-gpu hover:-translate-y-1.5 ${
+                selected ? "border-blue-500 shadow-[0_0_25px_rgba(59,130,246,0.15)]" : "border-white/10 shadow-xl shadow-black/40"
+              }`}
+            >
+              {/* Image Section */}
+              <div className="h-44 bg-[#071823] relative overflow-hidden">
+                {b.coverDataUrl ? (
+                  <img 
+                    src={b.coverDataUrl} 
+                    alt={b.name} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-slate-700 uppercase tracking-tighter">No Cover</div>
+                )}
+                
+                {/* Subtle Glow Overlay */}
+                <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </div>
-              <div className="p-3">
-                <div className="text-sm font-medium text-white truncate">{b.name}</div>
-                <div className="text-xs text-slate-400 mt-1 truncate">{getFolderName(b.path)}</div>
-                <div className="mt-3 flex items-center gap-2">
-                  <button onClick={() => removeBuild(b.id)} className="cursor-pointer ml-auto px-2 py-1 rounded-md hover:bg-[#0b2a36] text-slate-300"><Trash2 size={14} /></button>
+
+              {/* Info Section */}
+              <div className="p-4 bg-gradient-to-b from-transparent to-black/30">
+                <div className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors duration-300">
+                  {b.name}
+                </div>
+                <div className="text-[10px] text-slate-500 font-bold mt-1 truncate uppercase tracking-widest opacity-80">
+                  {getFolderName(b.path)}
+                </div>
+                
+                <div className="mt-4 flex items-center justify-between">
+                  {/* Simplified Indicator (No Badge) */}
+                  <div className={`flex items-center gap-2`}>
+                  </div>
+                  
+                  <button 
+                    onClick={() => removeBuild(b.id)} 
+                    className="cursor-pointer p-1.5 rounded-lg text-slate-600 hover:text-red-500 hover:bg-red-500/10 transition-all duration-300"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           );
-        })}
-      </div>
+        })
+      )}
     </div>
-  );
+  </div>
+);
 
   /* News / patch notes full list */
   const NewsPanel: React.FC = () => (
@@ -728,126 +896,141 @@ const SettingsPanel: React.FC = () => (
 );
 
 /* -------------------- Render main layout -------------------- */
-  return (    
+  return (
+  <div
+    className="w-screen h-screen flex text-slate-100 relative overflow-hidden rounded-xl border border-[#1e2a38]"
+    style={{
+      backgroundImage: `url('${Defaults.BACKGROUND_URL}')`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+    }}
+  >
+    {/* Blurred background overlay */}
+    <div className="absolute inset-0 backdrop-blur-2xl bg-black/50 z-0" />
 
+    <CustomTitleBar />
 
-    <div
-      className="w-screen h-screen flex text-slate-100 relative overflow-hidden rounded-xl border border-[#1e2a38]"
-        style={{
-          backgroundImage: `url('${Defaults.BACKGROUND_URL}')`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
-      >
-      {/* Blurred background overlay */}
-      <div className="absolute inset-0 backdrop-blur-2xl bg-black/50 z-0 rounded-xl" />
+    {/* Main content */}
+    <div className="relative z-10 flex w-full h-full pt-8">
+      {/* Pass props to LeftNav */}
+      <LeftNav 
+        active={active} 
+        setActive={setActive} 
+        user={user} 
+        EOR={EOR} 
+        handleLogout={handleLogout} 
+      />
 
-      <CustomTitleBar />
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Pass user to TopBar */}
+        <TopBar user={user} />
 
-      {/* Main content */}
-      <div className="relative z-10 flex w-full h-full pt-8">
-        <LeftNav />
-        <div className="flex-1 flex flex-col">
-          <TopBar />
+        <AnimatePresence>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -8 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -8 }} 
+              className="absolute right-6 top-6 z-50"
+            >
+              <div className="bg-red-600/90 text-white px-4 py-2 rounded-md shadow-lg border border-red-500/50">
+                {error}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          <AnimatePresence>
-            {error && (
-              <motion.div 
-                initial={{ opacity: 0, y: -8 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: -8 }} 
-                className="absolute right-6 top-6 z-50"
-              >
-                <div className="bg-red-600/90 text-white px-4 py-2 rounded-md shadow">{error}</div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="flex-1 overflow-auto p-6">
-            <AnimatePresence mode="wait">
-              {active === "home" && (
-                <TabTransition key="home">
-                  <HeroBanner />
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2">
-                      <div className="rounded-md border border-[#122432] p-4 bg-[#04121a]/60 backdrop-blur-sm">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <div className="text-lg font-semibold text-white">Featured & Highlights</div>
-                            <div className="text-xs text-slate-400">Top picks from your library</div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {builds.slice(0, 4).length === 0 ? (
-                            <div className="p-6 text-slate-400 italic">No builds featured yet.</div>
-                          ) : builds.slice(0, 4).map(b => (
-                            <motion.div 
-                              key={b.id} 
-                              whileHover={{ scale: 1.02 }}
-                              className="rounded-md overflow-hidden border border-[#122432] bg-[#06171f]/60 backdrop-blur-sm flex"
-                            >
-                              <div className="w-40 h-28 overflow-hidden bg-black/20">
-                                {b.coverDataUrl ? <img src={b.coverDataUrl} alt={b.name} className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center text-slate-500 text-[10px]">No Cover</div>}
-                              </div>
-                              <div className="p-3 flex-1">
-                                <div className="font-semibold text-white truncate">{b.name}</div>
-                                <div className="text-xs text-slate-400 mt-1">{getFolderName(b.path)}</div>
-                                <button onClick={() => removeBuild(b.id)} className="mt-3 cursor-pointer px-3 py-1 rounded-md bg-[#0b2a36] text-[10px] text-slate-300 hover:bg-red-900/30 hover:text-red-400 transition-colors">Remove</button>
-                              </div>
-                            </motion.div>
-                          ))}
+        <div className="flex-1 overflow-auto p-8 custom-scrollbar">
+          <AnimatePresence mode="wait">
+            {active === "home" && (
+              <TabTransition key="home">
+                <HeroBanner />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2">
+                    <div className="rounded-md border border-white/5 p-4 bg-[#04121a]/60 backdrop-blur-sm">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <div className="text-lg font-semibold text-white">Featured & Highlights</div>
+                          <div className="text-xs text-slate-400">Top picks from your library</div>
                         </div>
                       </div>
-                    </div>
 
-                    <div>
-                      <div className="rounded-md border border-[#122432] p-4 bg-[#04121a]/60 backdrop-blur-sm">
-                        <div className="text-sm font-semibold text-white">Quick Actions</div>
-                        <div className="mt-3 space-y-2">
-                          <button onClick={() => setActive("library")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36] text-sm text-slate-200 hover:bg-[#0ea5e9]/20 transition-all border border-transparent hover:border-[#0ea5e9]/30">Open Library</button>
-                          <button onClick={() => setActive("news")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36] text-sm text-slate-200 hover:bg-[#0ea5e9]/20 transition-all border border-transparent hover:border-[#0ea5e9]/30">View Patch Notes</button>
-                        </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {builds.length === 0 ? (
+                          <div className="p-6 text-slate-400 italic">No builds featured yet.</div>
+                        ) : builds.slice(0, 4).map(b => (
+                          <motion.div 
+                            key={b.id} 
+                            whileHover={{ scale: 1.02 }}
+                            className="rounded-md overflow-hidden border border-white/5 bg-[#06171f]/60 backdrop-blur-sm flex"
+                          >
+                            <div className="w-40 h-28 overflow-hidden bg-black/20">
+                              {b.coverDataUrl ? (
+                                <img src={b.coverDataUrl} alt={b.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full grid place-items-center text-slate-500 text-[10px]">No Cover</div>
+                              )}
+                            </div>
+                            <div className="p-3 flex-1 min-w-0">
+                              <div className="font-semibold text-white truncate">{b.name}</div>
+                              <div className="text-xs text-slate-400 mt-1 truncate">{getFolderName(b.path)}</div>
+                              <button onClick={() => removeBuild(b.id)} className="mt-3 cursor-pointer px-3 py-1 rounded-md bg-[#0b2a36] text-[10px] text-slate-300 hover:bg-red-900/30 hover:text-red-400 transition-colors">
+                                Remove
+                              </button>
+                            </div>
+                          </motion.div>
+                        ))}
                       </div>
                     </div>
                   </div>
-                </TabTransition>
-              )}
 
-              {active === "library" && (
-                <TabTransition key="library">
-                  <LibraryPanel />
-                </TabTransition>
-              )}
+                  <div>
+                    <div className="rounded-md border border-white/5 p-4 bg-[#04121a]/60 backdrop-blur-sm">
+                      <div className="text-sm font-semibold text-white">Quick Actions</div>
+                      <div className="mt-3 space-y-2">
+                        <button onClick={() => setActive("library")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36] text-sm text-slate-200 hover:bg-[#0ea5e9]/20 transition-all border border-transparent hover:border-[#0ea5e9]/30">Open Library</button>
+                        <button onClick={() => setActive("news")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36] text-sm text-slate-200 hover:bg-[#0ea5e9]/20 transition-all border border-transparent hover:border-[#0ea5e9]/30">View Patch Notes</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabTransition>
+            )}
 
-              {active === "news" && (
-                <TabTransition key="news">
-                  <NewsPanel />
-                </TabTransition>
-              )}
+            {active === "library" && (
+              <TabTransition key="library">
+                <LibraryPanel />
+              </TabTransition>
+            )}
 
-              {active === "shop" && (
-                <TabTransition key="shop">
-                  <ShopPanel />
-                </TabTransition>
-              )}
+            {active === "news" && (
+              <TabTransition key="news">
+                <NewsPanel />
+              </TabTransition>
+            )}
 
-              {active === "settings" && (
-                <TabTransition key="settings">
-                  <SettingsPanel />
-                </TabTransition>
-              )}
+            {active === "shop" && (
+              <TabTransition key="shop">
+                <ShopPanel />
+              </TabTransition>
+            )}
 
-              {active === "leaderboard" && (
-                <TabTransition key="leaderboard">
-                  <LeaderboardPanel />
-                </TabTransition>
-              )}
-            </AnimatePresence>
-          </div>
+            {active === "settings" && (
+              <TabTransition key="settings">
+                <SettingsPanel />
+              </TabTransition>
+            )}
+
+            {active === "leaderboard" && (
+              <TabTransition key="leaderboard">
+                <LeaderboardPanel />
+              </TabTransition>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

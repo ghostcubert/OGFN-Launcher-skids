@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { open } from "@tauri-apps/api/shell";
 import { fetch, ResponseType } from "@tauri-apps/api/http";
 import { Defaults } from "./defaults";
@@ -53,6 +53,10 @@ const CustomTitleBar = () => (
 );
 
 export default function Login() {
+  const [avatarHash, setAvatarHash] = useState("");
+  const [discordId, setDiscordId] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [username, setUsername] = useState("");
   const navigate = useNavigate();
   const [form, setForm] = useState<Credentials>({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -61,9 +65,10 @@ export default function Login() {
   const [remember] = useState(true);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (error) setError(null);
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-  };
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,22 +95,34 @@ export default function Login() {
 
       if (response.ok) {
         const data = JSON.parse(response.data as string);
-        
+        const sessionUser = {
+        email: form.email,
+        password: form.password,
+        username: data.username,
+        discordId: data.discordId,
+        avatarHash: data.avatarHash
+      };
+        console.log("Backend Response:", data);
+        setUsername(data.username);
+        setDiscordId(data.discordId);
+        setAvatarHash(data.avatarHash);
+
         if (remember) {
-          localStorage.setItem(
-            "user",
-            JSON.stringify({ 
-              email: form.email, 
-              password: form.password,
-              username: data.username 
-            })
-          );
+          localStorage.setItem("user", JSON.stringify(sessionUser));
         }
-        navigate("/onboard");
-      } else {
-        const errorMessage = response.data as string;
-        setError(errorMessage || "An error occurred during login.");
-      }
+        setIsSuccess(true);
+        setTimeout(() => {
+            navigate("/onboard");
+        }, 2000);
+    } else {
+        const serverMessage = response.data as string;
+
+        if (response.status === 400 && serverMessage === "Error!") {
+            setError("Wrong Credentials"); 
+        } else {
+            setError(serverMessage || "An error occurred during login.");
+        }
+    }
     } catch (err) {
       console.error(err);
       setError("Unable to connect to the server.");
@@ -115,51 +132,57 @@ export default function Login() {
   };
 
   return (
-    <div className="w-screen h-screen relative overflow-hidden text-gray-100 bg-[#0b0c10] select-none rounded-xl border border-white/10">
+      <div className="w-screen h-screen relative overflow-hidden text-gray-100 bg-[#0b0c10] select-none rounded-xl border border-white/10 font-sans">
       <CustomTitleBar />
 
       {/* BACKGROUND */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 rounded-xl overflow-hidden z-0">
         <img
           src={Defaults.BACKGROUND_URL}
-          alt="Launcher Background"
-          className="w-full h-full object-cover opacity-30 pointer-events-none"
-          draggable={false}
+          alt="background"
+          className="w-full h-full object-cover opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
       </div>
 
       {/* CENTERED LOGIN CARD */}
-      <div className="relative flex flex-col items-center justify-center h-full pointer-events-auto">
+      <div className="relative flex flex-col items-center justify-center h-full w-full px-10">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/20 blur-[100px] rounded-full pointer-events-none" />
+    <AnimatePresence mode="wait">
+        {!isSuccess ? (
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-md bg-black/60 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-8"
+          key="login-form"
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="relative w-full max-w-[400px] bg-black/60 backdrop-blur-2xl border border-white/10 p-10 rounded-2xl shadow-2xl z-10"
         >
-          <div className="flex flex-col items-center space-y-4 mb-6">
-            {/* Custom Logo */}
+          <div className="text-center mb-8">
             <img
               src={Defaults.LOGO_URL}
-              alt="Custom Logo"
-              className="h-10"
-              draggable={false}
+              alt="Logo"
+              className="w-16 h-16 mx-auto mb-4 rounded-xl bg-[#07080a] border border-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(14,165,233,0.15)] overflow-hidden relative" 
             />
-            <h1 className="text-2xl font-semibold tracking-wide">Sign In</h1>
-            <p className="text-gray-400 text-sm">to continue to the launcher</p>
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              Sign In
+            </h1>
+            <p className="text-slate-400 text-sm mt-1">
+              To Play {Defaults.LAUNCHER_NAME}
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate autoComplete="off">
             <div>
               <label className="text-sm text-gray-300">Email</label>
               <input
                 type="email"
                 name="email"
-                autoComplete="email"
+                autoComplete="one-time-code" 
+                spellCheck="false"
                 value={form.email}
                 onChange={handleChange}
                 placeholder="name@example.com"
-                className="cursor-text mt-1 w-full rounded-lg bg-[#141414] border border-white/10 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-4 py-3 outline-none focus:border-blue-500/50 focus:bg-blue-500/5 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-slate-500"
               />
             </div>
 
@@ -173,7 +196,7 @@ export default function Login() {
                   value={form.password}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  className="w-full rounded-lg bg-[#141414] border border-white/10 px-4 py-3 pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
+                  className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-4 py-3 outline-none focus:border-blue-500/50 focus:bg-blue-500/5 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-slate-500"
                 />
                 <button
                   type="button"
@@ -185,36 +208,35 @@ export default function Login() {
               </div>
             </div>
 
+            <AnimatePresence mode="wait">
             {error && (
-              <p className="text-sm text-red-400 bg-red-500/10 border border-red-400/30 rounded-lg p-2">
-                {error}
-              </p>
+              <motion.div
+                initial={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
+                animate={{ 
+                  opacity: 1, 
+                  height: "auto", 
+                  marginTop: 0, 
+                  marginBottom: 16
+                }}
+                exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                className="overflow-hidden"
+              >
+                <p className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-200 text-xs text-center font-medium">
+                  {error}
+                </p>
+              </motion.div>
             )}
+          </AnimatePresence>
 
             <motion.button
               type="submit"
               disabled={loading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="cursor-pointer w-full rounded-lg px-6 py-3 font-semibold text-white bg-gradient-to-r from-blue-700 to-blue-500 shadow-lg hover:from-blue-600 hover:to-blue-400 transition-all disabled:opacity-60"
+              className="cursor-pointer w-full rounded-lg px-6 py-3 font-bold text-sm uppercase tracking-wide text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg
-                    className="animate-spin h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  >
-                    <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                    <path d="M4 12a8 8 0 018-8" />
-                  </svg>
-                  Logging in...
-                </span>
-              ) : (
-                "Sign In"
-              )}
+            {loading ? "Logging in..." : "Sign In"}
             </motion.button>
           </form>
 
@@ -229,8 +251,54 @@ export default function Login() {
                 Create one
               </button>
             </div>
-
         </motion.div>
+        ) : (
+          <motion.div
+  key="welcome-msg"
+  initial={{ opacity: 0, scale: 0.9 }}
+  animate={{ opacity: 1, scale: 1 }}
+  transition={{ duration: 0.5 }}
+  className="text-center z-50"
+>
+  {/* NEW PROFILE PICTURE CONTAINER */}
+  <motion.div 
+  initial={{ scale: 0, rotate: -10 }} 
+  animate={{ scale: 1, rotate: 0 }} 
+  transition={{ type: "spring", delay: 0.2 }}
+  className="w-24 h-24 mx-auto mb-6 relative"
+>
+  <div className="absolute inset-0 rounded-full bg-blue-500/30 blur-xl animate-pulse" />
+  
+  <div className="relative w-full h-full rounded-full border-2 border-blue-500 overflow-hidden bg-[#0b0c10] shadow-[0_0_40px_rgba(37,99,235,0.4)]">
+  {discordId ? (
+    <img 
+      key={discordId}
+  src={
+    avatarHash 
+      ? `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.png?size=256`
+      : `https://ui-avatars.com/api/?name=${username}&background=0ea5e9&color=fff`
+  } 
+  alt="Profile"
+  className="w-full h-full object-cover"
+  onError={(e) => {
+    e.currentTarget.src = `https://ui-avatars.com/api/?name=${username}&background=0ea5e9&color=fff`;
+  }}
+    />
+  ) : null}
+
+  <div className="absolute inset-0 flex items-center justify-center text-3xl font-bold text-white -z-10">
+     {username.charAt(0).toUpperCase()}
+  </div>
+</div>
+</motion.div>
+
+  <h2 className="text-4xl font-bold text-white tracking-tight">
+    Welcome, <span className="text-blue-400">{username}</span>
+  </h2>
+  <p className="text-slate-400 mt-3 text-lg">Launching...</p>
+</motion.div>
+        )}
+        </AnimatePresence>
       </div>
     </div>
   );
