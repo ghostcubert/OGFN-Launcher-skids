@@ -5,6 +5,7 @@ export type DefaultsType = {
   LOGO_URL: string;
   BACKGROUND_URL: string;
   PLACEHOLDER_IMAGE: string;
+  LAUNCHER_VERSION: string;
 };
 
 const env = import.meta.env;
@@ -15,7 +16,8 @@ export const Defaults: DefaultsType = {
   DISCORD_LINK: env.VITE_DISCORD_LINK || "https://example.com",
   LOGO_URL: env.VITE_LOGO_URL || "https://i.ibb.co/1GVGmGPh/logo.png",
   BACKGROUND_URL: env.VITE_BACKGROUND_URL || "https://i.ibb.co/hx42Ndqt/fn.jpg",
-  PLACEHOLDER_IMAGE: env.VITE_PLACEHOLDER_IMAGE || "https://i.imgur.com/CPdmKDe.jpeg"
+  PLACEHOLDER_IMAGE: env.VITE_PLACEHOLDER_IMAGE || "https://i.imgur.com/CPdmKDe.jpeg",
+  LAUNCHER_VERSION: env.VITE_LAUNCHER_VERSION || "1.0.0"
 };
 
 export const LibraryConfig = {

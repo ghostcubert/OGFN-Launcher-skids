@@ -1,6 +1,10 @@
+use winapi::um::memoryapi::{VirtualAllocEx, WriteProcessMemory};
+use winapi::um::processthreadsapi::{CreateRemoteThread, OpenProcess};
+use winapi::um::winnt::{MEM_COMMIT, MEM_RESERVE, PAGE_READWRITE, PROCESS_ALL_ACCESS};
+use winapi::um::libloaderapi::{GetModuleHandleA, GetProcAddress};
 use std::io::Write;
+use std::time::{Duration};
 use std::os::windows::process::CommandExt;
-use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use winapi::shared::minwindef::FALSE;
 use winapi::um::handleapi::CloseHandle;
@@ -336,67 +340,66 @@ pub async fn launch_real_launcher(root: &str) -> Result<bool, String> {
 }
 
 #[tauri::command]
-async fn dll_replace(path: &str, app: AppHandle) -> Result<bool, String> {
-    println!("Experience function called for path: {}", path);
-
+pub async fn dll_replace(path: &str, url: String, app: AppHandle) -> Result<bool, String> {
     let window = app.get_window("main").unwrap();
-    println!("Got main window.");
+    let path_buf = std::path::PathBuf::from(path);
 
-    println!("Killed any existing processes.");
+    let mut nvidia_path = path_buf.clone();
+    nvidia_path.push("Engine\\Binaries\\ThirdParty\\NVIDIA\\NVaftermath\\Win64\\GFSDK_Aftermath_Lib.x64.dll");
 
-    let path = PathBuf::from(path);
-    println!("Converted path to PathBuf: {:?}", path);
-
-    let mut nvidia_path = path.clone();
-    nvidia_path.push(
-        "Engine\\Binaries\\ThirdParty\\NVIDIA\\NVaftermath\\Win64\\GFSDK_Aftermath_Lib.x64.dll",
-    );
-    println!("NVIDIA DLL path: {:?}", nvidia_path);
-
-    while nvidia_path.exists() {
-        if std::fs::remove_file(&nvidia_path).is_ok() {
-            println!("Removed existing NVIDIA DLL: {:?}", nvidia_path);
-            break;
-        }
-
-        println!("Failed to remove NVIDIA DLL, retrying...");
-        std::thread::sleep(std::time::Duration::from_millis(100));
+    if nvidia_path.exists() {
+        let _ = std::fs::remove_file(&nvidia_path);
     }
 
-    let full_url = "https://github.com/lalaland1212/LocalDLL127001/raw/refs/heads/main/Starfall.dll";
+    let filename = url.split('/').last().unwrap_or("file.dll");
+    let base_url = url.replace(filename, "");
 
-    let filename = full_url.split('/').last().unwrap_or("file.dll");
-    let base_url = full_url.replace(filename, "");
-
-    let _ = download(
+    download(
         &base_url,
         filename,
-        nvidia_path.clone().to_str().unwrap_or("C:\\Default\\Path"),
+        nvidia_path.to_str().unwrap(),
         &window,
-    )
-    .await;
+    ).await?;
 
     Ok(true)
 }
 
-#[tauri::command]
+pub fn inject_dll(pid: u32, dll_path: &str) -> Result<(), String> {
+    unsafe {
+        let handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+        if handle.is_null() { return Err("Failed to open process".into()); }
+
+        let path_null = format!("{}\0", dll_path);
+        let bytes = path_null.as_bytes();
+        
+        let mem = VirtualAllocEx(handle, std::ptr::null_mut(), bytes.len(), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        WriteProcessMemory(handle, mem, bytes.as_ptr() as *const _, bytes.len(), std::ptr::null_mut());
+
+        let k32 = GetModuleHandleA("kernel32.dll\0".as_ptr() as *const i8);
+        let load_lib = GetProcAddress(k32, "LoadLibraryA\0".as_ptr() as *const i8);
+
+        CreateRemoteThread(handle, std::ptr::null_mut(), 0, Some(std::mem::transmute(load_lib)), mem, 0, std::ptr::null_mut());
+        
+        CloseHandle(handle);
+        Ok(())
+    }
+}
+
 pub async fn launch_fn(
     path: &str,
+    redirect_url: String, 
+    inject_urls: String,
     app: AppHandle,
     email: String,
     password: String,
     eor: bool,
 ) -> Result<bool, String> {
-    match dll_replace(path, app).await {
-        Ok(_) => {}
-        Err(e) => {
-            return Err(
-                "Could not launch the game for reason: ".to_string() + e.to_string().as_str()
-            );
-        }
+    if let Err(e) = dll_replace(path, redirect_url, app.clone()).await {
+        return Err(format!("Could not replace DLL: {}", e));
     }
 
     let base = std::path::PathBuf::from(path);
+
     let mut fort_ac_path = base.clone();
     fort_ac_path.push("FortniteGame\\Binaries\\Win64\\FortniteClient-Win64-Shipping_EAC.exe");
     if !fort_ac_path.exists() {
@@ -405,53 +408,71 @@ pub async fn launch_fn(
 
     let mut fort_ac_cwd = base.clone();
     fort_ac_cwd.push("FortniteGame\\Binaries\\Win64");
-    let fortnite_ac_process = std::process::Command::new(fort_ac_path)
+    let _ = std::process::Command::new(fort_ac_path)
         .creation_flags(CREATE_NO_WINDOW | 0x00000004)
         .current_dir(fort_ac_cwd)
         .spawn();
 
-    if fortnite_ac_process.is_err() {
-        return Err("Failed to launch FortniteClient-Win64-Shipping_EAC.exe".to_string());
-    }
-    let res = launch_real_launcher(base.clone().to_str().unwrap()).await;
-    if res.is_err() {
-        println!("launch easy anti cheat");
-        return Err("Failed to launch Fortnite Launcher".to_string());
-    }
+    let _ = launch_real_launcher(base.to_str().unwrap()).await?;
 
     let mut fort_binary = base.clone();
     fort_binary.push("FortniteGame\\Binaries\\Win64\\FortniteClient-Win64-Shipping.exe");
-    if !fort_binary.exists() {
-        return Err("Could not find FortniteClient-Win64-Shipping.exe".to_string());
-    }
-
+    
     let auth_email = format!("-AUTH_LOGIN={}", email);
     let auth_password = format!("-AUTH_PASSWORD={}", password);
+
     let fort_args = vec![
-        "-epicapp=Fortnite",
-        "-epicenv=Prod",
-        "-epiclocale=en-us",
-        "-epicportal",
-        "-skippatchcheck",
-        "-nobe",
-        "-fromfl=eac",
-        "-fltoken=3db3ba5dcbd2e16703f3978d",
-        "-caldera=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoiYmU5ZGE1YzJmYmVhNDQwN2IyZjQwZWJhYWQ4NTlhZDQiLCJnZW5lcmF0ZWQiOjE2Mzg3MTcyNzgsImNhbGRlcmFHdWlkIjoiMzgxMGI4NjMtMmE2NS00NDU3LTliNTgtNGRhYjNiNDgyYTg2IiwiYWNQcm92aWRlciI6IkVhc3lBbnRpQ2hlYXQiLCJub3RlcyI6IiIsImZhbGxiYWNrIjpmYWxzZX0.VAWQB67RTxhiWOxx7DBjnzDnXyyEnX7OljJm-j2d88G_WgwQ9wrE6lwMEHZHjBd1ISJdUO1UVUqkfLdU5nofBQ",
-        "-AUTH_TYPE=epic",
-        if eor { "-eor" } else {""},
-        &auth_email,
-        &auth_password,
+        "-epicapp=Fortnite".to_string(),
+        "-epicenv=Prod".to_string(),
+        "-epiclocale=en-us".to_string(),
+        "-epicportal".to_string(),
+        "-skippatchcheck".to_string(),
+        "-nobe".to_string(),
+        "-fromfl=eac".to_string(),
+        "-fltoken=3db3ba5dcbd2e16703f3978d".to_string(),
+        "-caldera=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoiYmU5ZGE1YzJmYmVhNDQwN2IyZjQwZWJhYWQ4NTlhZDQiLCJnZW5lcmF0ZWQiOjE2Mzg3MTcyNzgsImNhbGRlcmFHdWlkIjoiMzgxMGI4NjMtMmE2NS00NDU3LTliNTgtNGRhYjNiNDgyYTg2IiwiYWNQcm92aWRlciI6IkVhc3lBbnRpQ2hlYXQiLCJub3RlcyI6IiIsImZhbGxiYWNrIjpmYWxzZX0.VAWQB67RTxhiWOxx7DBjnzDnXyyEnX7OljJm-j2d88G_WgwQ9wrE6lwMEHZHjBd1ISJdUO1UVUqkfLdU5nofBQ".to_string(),
+        "-AUTH_TYPE=epic".to_string(),
+        if eor { "-eor".to_string() } else { "".to_string() },
+        auth_email,
+        auth_password,
     ];
 
-    let fort_cmd = std::process::Command::new(fort_binary)
+    let fort_cmd = std::process::Command::new(&fort_binary)
         .creation_flags(CREATE_NO_WINDOW)
-        .args(fort_args)
-        .spawn();
+        .args(&fort_args) 
+        .spawn()
+        .map_err(|e| format!("Failed to spawn Fortnite: {}", e))?;
 
-    if fort_cmd.is_err() {
-        return Err("Failed to launch Fortnite".to_string());
+    let pid = fort_cmd.id();
+
+    tokio::time::sleep(Duration::from_secs(70)).await;
+
+    if !inject_urls.is_empty() {
+        let window = app.get_window("main").ok_or("No window")?;
+
+        tokio::time::sleep(Duration::from_secs(10)).await;
+
+        for url in inject_urls.split(',') {
+            if url.trim().is_empty() { continue; }
+            
+            let filename = url.split('/').last().unwrap_or("inject.dll");
+
+            let base_url = url.trim_end_matches(filename).trim_end_matches('/'); 
+            
+            let temp_path = std::env::temp_dir().join(filename);
+            let temp_path_str = temp_path.to_str().ok_or("Invalid temp path")?;
+
+            download(
+                base_url, 
+                filename, 
+                temp_path_str, 
+                &window
+            ).await?;
+            
+            let _ = inject_dll(pid, temp_path_str);
+        }
     }
 
-    println!("Fortnite launched successfully.");
+    println!("Fortnite launched and DLLs injected successfully.");
     Ok(true)
 }

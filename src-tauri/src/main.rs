@@ -6,17 +6,6 @@ use tauri::{AppHandle, Manager, Window};
 mod carter;
 use dotenvy::dotenv;
 
-#[derive(Debug)]
-pub struct MyError;
-
-impl warp::reject::Reject for MyError {}
-
-impl std::fmt::Display for MyError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "An error occurred")
-    }
-}
-
 #[tauri::command]
 fn close_launcher(app: tauri::AppHandle) {
     app.exit(0);
@@ -35,24 +24,16 @@ async fn firstlaunch(
     password: String,
     eor: bool,
 ) -> Result<bool, String> {
-    use std::path::PathBuf;
-
     carter::kill();
     carter::kill_epic();
 
-    let path = PathBuf::from(path);
+    let dll_url = env::var("VITE_REDIRECT_LINK")
+        .unwrap_or_else(|_| "".to_string());
+        
+    let inject_dlls = env::var("VITE_INJECT_DLLS_LINKS")
+        .unwrap_or_else(|_| "".to_string());
 
-    let res = carter::launch_real_launcher(path.to_str().unwrap()).await;
-    if let Err(e) = res {
-        return Err(e.to_string());
-    }
-
-    let res = carter::launch_fn(path.to_str().unwrap(), app, email, password, eor).await;
-    if let Err(e) = res {
-        return Err(e.to_string());
-    }
-
-    Ok(true)
+    carter::launch_fn(&path, dll_url, inject_dlls, app, email, password, eor).await
 }
 
 #[tauri::command]
@@ -86,7 +67,6 @@ async fn main() {
                     }
                 });
             }
-
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -98,24 +78,16 @@ async fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Start der App");
-
-    project::run();
 }
 
 #[tauri::command]
 fn is_fortnite_client_running() -> bool {
     let mut system = System::new_all();
     system.refresh_all();
-
     for (_, process) in system.processes() {
-        if process
-            .name()
-            .to_string_lossy()
-            .contains("FortniteClient-Win64-Shipping.exe")
-        {
+        if process.name().to_string_lossy().contains("FortniteClient-Win64-Shipping.exe") {
             return true;
         }
     }
-
     false
 }

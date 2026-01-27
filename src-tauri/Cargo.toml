@@ -20,6 +20,7 @@ tauri-build = { version = "1.5", features = [] }
 winres = "0.1"
 
 [dependencies]
+dll-injector = "0.1.2"
 dotenvy = "0.15"
 discord-rpc-client = "^0.4"
 libloading = "0.8"

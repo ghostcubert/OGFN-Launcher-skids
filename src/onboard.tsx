@@ -75,9 +75,12 @@ export default function Onboard() {
   const [path, setPath] = useState<string | null>(null);
   const [isLaunching, setIsLaunching] = useState(false);
   const [user, setUser] = useState<{ email: string; password: string } | null>(null);
-  const [EOR, setEOR] = useState(false);
   const [builds, setBuilds] = useState<BuildItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [eor, setEor] = useState(false);
+  const [ror, setRor] = useState(false);
+  const [bubbleBuilds, setBubbleBuilds] = useState(false);
+  const [mobileBuilds, setMobileBuilds] = useState(false);
 
 /* -------------------- Animations -------------------- */
 const TabTransition: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -135,8 +138,8 @@ const LeaderboardPanel: React.FC = () => {
       {/* Header Section */}
       <div className="flex items-center justify-between mb-6 px-1">
         <div>
-          <div className="text-2xl font-black text-white uppercase tracking-tighter italic">Global Arena</div>
-          <div className="text-[10px] text-slate-500 font-bold tracking-[0.2em] mt-0.5 uppercase opacity-80">Ranked Leaderboards</div>
+          <div className="text-2xl font-black text-white uppercase tracking-tighter italic">Arena Leaderboard</div>
+          <div className="text-[10px] text-slate-500 font-bold tracking-[0.2em] mt-0.5 uppercase opacity-80"></div>
         </div>
       </div>
 
@@ -307,7 +310,7 @@ const ShopPanel: React.FC = () => {
   const RenderSection = (title: string, items: any[]) => (
   <div className="mb-12">
     <div className="flex items-center gap-6 mb-6 px-1">
-      <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">{title}</h3>
+      <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">{title}</h3>
       <div className="h-[1px] flex-1 bg-gradient-to-r from-white/10 to-transparent" />
     </div>
     
@@ -322,26 +325,31 @@ const ShopPanel: React.FC = () => {
             key={entry.id}
             className={`group relative rounded-xl overflow-hidden bg-[#0b1724] border transition-all duration-300 transform-gpu ${style.border}`}
           >
-            <div className="aspect-square overflow-hidden relative bg-[#071422]">
-              <div className={`absolute inset-0 bg-gradient-to-t ${style.bg} to-transparent opacity-20 z-0`} />
-              
-              {info?.image ? (
-                <img 
-                  src={info.image} 
-                  /* Hide image until it's ready to prevent 'line circle' artifacts */
-                  onLoad={(e) => e.currentTarget.classList.remove('opacity-0')}
-                  className="w-full h-full object-contain relative z-10 p-2 transition-all duration-500 group-hover:scale-105 opacity-0" 
-                />
-              ) : (
-                <div className="w-full h-full bg-[#071422]" />
-              )}
-              
-              <div className="absolute top-2 right-2 z-30 px-2 py-1 rounded-md bg-black/70 backdrop-blur-md flex items-center gap-1.5 border border-white/5">
-                <img src="https://i.imgur.com/pfmvUEu.png" className="w-3 h-3" alt="V" />
-                <span className="text-[11px] font-bold text-white tracking-tighter">{entry.price}</span>
-              </div>
+            <div className="aspect-square overflow-hidden relative bg-[#071422] group">
+            {/* Background Gradient */}
+            <div className={`absolute inset-0 bg-gradient-to-t ${style.bg} to-transparent opacity-30 z-10 transition-opacity duration-500 group-hover:opacity-40`} />
+            
+            {info?.image ? (
+              <img 
+                src={info.image} 
+                onLoad={(e) => e.currentTarget.classList.remove('opacity-0')}
+                className="w-full h-full object-cover relative z-0 transition-transform duration-700 ease-out group-hover:scale-110 opacity-0" 
+                /* 1. object-cover: Makes the image fill the entire square (zoomed in look)
+                  2. scale-110: Makes the hover zoom much more impactful
+                  3. transition duration-700: Makes it feel "premium" and smooth
+                  4. Removed p-2: Allows the image to touch the edges perfectly
+                */
+              />
+            ) : (
+              <div className="w-full h-full bg-[#071422]" />
+            )}
+            
+            {/* Price Badge */}
+            <div className="absolute top-3 right-3 z-30 px-2 py-1.5 rounded-md bg-black/60 backdrop-blur-xl flex items-center gap-2 border border-white/10 shadow-xl transition-transform duration-300 group-hover:scale-105">
+              <img src="https://i.imgur.com/pfmvUEu.png" className="w-3.5 h-3.5" alt="V" />
+              <span className="text-[11px] font-black text-white tracking-tighter uppercase italic">{entry.price}</span>
             </div>
-
+          </div>
             <div className="p-3 bg-black/20">
               <div className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${style.text}`}>
                 {info?.rarity || "Loading..."}
@@ -420,9 +428,6 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
       try { setUser(JSON.parse(savedUser)); } catch { /* ignore */ }
     }
 
-    const rawEOR = localStorage.getItem("EOR");
-    if (rawEOR !== null) setEOR(rawEOR === "true");
-
     const savedBuilds = localStorage.getItem("SettingsMP.builds");
     if (savedBuilds) {
       try {
@@ -481,18 +486,17 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
     }
 
     try {
-      await invoke("firstlaunch", {
-        path: launchPath,
-        email: user.email,
-        password: user.password,
-        eor: EOR,
-      });
-    } catch (err) {
-      setError("Fehler beim Start: " + String(err));
-      setTimeout(() => setError(null), 5000);
-      setIsLaunching(false);
-    }
-  };
+    await invoke("firstlaunch", {
+      path: launchPath,
+      email: user.email,
+      password: user.password,
+      eor: eor,
+    });
+  } catch (err) {
+    setError("Fehler beim Start: " + String(err));
+    setIsLaunching(false);
+  }
+};
 
   const handleLogout = () => {
     localStorage.clear();
@@ -500,11 +504,6 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
     setPath(null);
     setBuilds([]);
     navigate("/login");
-  };
-
-  const handleToggleEOR = (next: boolean) => {
-    setEOR(next);
-    localStorage.setItem("EOR", String(next));
   };
 
   /* -------------------- builds -------------------- */
@@ -594,7 +593,6 @@ interface LeftNavProps {
   active: TabKey;
   setActive: (val: TabKey) => void;
   user: UserData | null;
-  EOR: boolean;
   handleLogout: () => void;
 }
 
@@ -708,57 +706,125 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
 
   /* Hero carousel / featured area (Epic-like big banner) */
   const HeroBanner: React.FC = () => {
-    const current = builds.find((b) => b.path === path) ?? builds[0];
-    return (
-      <div className="mb-6">
-        <div className="relative rounded-xl overflow-hidden border border-[#122432] bg-[#000000]/10 backdrop-blur-sm">
-          <img src={Defaults.PLACEHOLDER_IMAGE} className="w-full h-64 object-cover brightness-75" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#04121a]/80" />
-          <div className="absolute left-8 bottom-8 right-8 flex items-center gap-6">
+  const current = builds.find((b) => b.path === path) ?? builds[0];
+  const bannerImage = current?.coverDataUrl || Defaults.PLACEHOLDER_IMAGE;
+
+  return (
+      <div className="mb-6 animate-in fade-in duration-700">
+        {/* MAIN BANNER */}
+        <div className="relative rounded-2xl overflow-hidden border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl transition-all">
+          {/* Background Image with Smoother Gradient Overlay */}
+          <div className="relative h-72">
+            <img 
+              key={bannerImage} // Key helps React trigger a smooth transition when the image changes
+              src={bannerImage} 
+              className="w-full h-full object-cover brightness-[0.6] scale-100 animate-in fade-in duration-500" 
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0b1724] via-[#0b1724]/20 to-transparent" />
+          </div>
+
+          {/* Content Overlay */}
+          <div className="absolute inset-0 p-8 flex items-end gap-6">
             <div className="flex-1">
-              <div className="text-2xl font-bold text-white drop-shadow">{current?.name ?? "Featured"}</div>
-              <div className="text-sm text-slate-300 mt-1">{current ? `Installed: ${current.path}` : "No build selected — add one in Library"}</div>
-              <div className="mt-4 flex items-center gap-3">
-                <motion.button onClick={handleLaunch} whileTap={{ scale: 0.98 }} disabled={isLaunching || !current || !user} className="cursor-pointer px-6 py-3 rounded-md bg-[#0ea5e9] text-black font-semibold shadow-lg disabled:opacity-60 flex items-center gap-2">
-                  <Play size={16} /> {isLaunching ? "Launching..." : "PLAY"}
+              <div className="flex items-center gap-2 mb-1">
+                 <div className="h-1 w-6 bg-blue-500 rounded-full" />
+                 <span className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em]">
+                   {current ? "Active Build" : "Featured Content"}
+                 </span>
+              </div>
+              <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter drop-shadow-lg">
+                {`${current?.name ?? "Ready to Play"} ${Defaults.LAUNCHER_NAME}`}
+              </h2>
+              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1 opacity-80">
+                {current ? `PATH: ${current.path}` : "No build selected — add one in Library"}
+              </p>
+
+              <div className="mt-6 flex items-center gap-3">
+                <motion.button 
+                  onClick={handleLaunch} 
+                  whileTap={{ scale: 0.97 }} 
+                  disabled={isLaunching || !current || !user} 
+                  className="cursor-pointer px-8 py-3 rounded-xl bg-blue-500 text-white font-black uppercase italic tracking-tighter shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all flex items-center gap-2"
+                >
+                  <Play size={18} fill="currentColor" /> 
+                  {isLaunching ? "Launching..." : "PLAY"}
                 </motion.button>
 
-                <button onClick={() => setActive("library")} className="cursor-pointer px-4 py-2 rounded-md bg-[#102834]/70 text-slate-200">Library</button>
+                <button 
+                  onClick={() => setActive("library")} 
+                  className="cursor-pointer px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 font-black uppercase italic tracking-tighter hover:bg-white/10 transition-all"
+                >
+                  Library
+                </button>
               </div>
             </div>
 
-            <div className="w-56">
-              <div className="bg-[#071824]/60 p-3 rounded-md border border-[#112a34]">
-                <div className="text-xs text-slate-400">Status</div>
-                <div className="text-sm text-white mt-1">{user?.email ? user.email.split("@")[0] : "Not logged in"}</div>
-                <div className="text-xs text-slate-400 mt-1">EOR: {EOR ? "Enabled" : "Disabled"}</div>
+            {/* Status Card (Right Side) */}
+            <div className="w-64 hidden md:block">
+              <div className="bg-black/40 p-4 rounded-xl border border-white/10 backdrop-blur-md">
+                <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Username</div>
+                <div className="text-sm text-white font-black uppercase italic tracking-tighter mt-1 truncate">
+                  {user?.email ? user.email.split("@")[0] : "Not logged in"}
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
+                     <div className="h-full w-full bg-blue-500/50" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-3 flex gap-3 overflow-x-auto">
-          {news.map((n) => (
-            <motion.div key={n.id} whileHover={{ y: -6 }} className="min-w-[260px] rounded-md overflow-hidden border border-[#122432] bg-[#06161d]/70 backdrop-blur-sm">
-              <img src={n.img} alt={n.title} className="cursor-pointer h-28 w-full object-cover" />
-              <div className="cursor-pointer p-3">
-                <div className="text-xs text-slate-400">{n.date}</div>
-                <div className="text-sm text-white font-semibold mt-1">{n.title}</div>
-                <div className="text-xs text-slate-300 mt-1 line-clamp-2">{n.desc}</div>
+      {/* NEWS ROW */}
+      <div className="mt-4 flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+        {news.map((n) => (
+          <motion.div 
+            key={n.id} 
+            whileHover={{ y: -5 }} 
+            className="min-w-[280px] rounded-xl overflow-hidden border border-white/5 bg-[#0b1724]/40 backdrop-blur-sm group cursor-pointer relative"
+          >
+            {/* CONTAINER SCALE: We scale this DIV, which scales the image and gradient together as one */}
+            <div className="relative h-28 overflow-hidden transition-transform duration-500 ease-out group-hover:scale-110">
+              <img 
+                src={n.img} 
+                alt={n.title} 
+                className="h-full w-full object-cover" 
+                /* Image no longer scales itself; the parent handles it */
+              />
+              
+              {/* Gradient is now perfectly locked to the image because the parent container is scaling */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1724] to-transparent opacity-90" />
+            </div>
+
+            {/* Text Content */}
+            <div className="p-4 relative z-10">
+              <div className="text-[9px] text-blue-400 font-black uppercase tracking-widest">
+                {n.date}
               </div>
-            </motion.div>
-          ))}
-        </div>
+              <div className="text-sm text-white font-black uppercase italic tracking-tight mt-1 group-hover:text-blue-400 transition-colors duration-300">
+                {n.title}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-snug">
+                {n.desc}
+              </div>
+            </div>
+
+            {/* The Line - We keep this scale-x from center for that premium look */}
+            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-500 origin-center scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100 z-20" />
+          </motion.div>
+        ))}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   /* Library styled like Epic store grid */
   const LibraryPanel: React.FC = () => (
   <div className="animate-in fade-in duration-500">
     <div className="flex items-center justify-between mb-6 px-1">
       <div>
-        <div className="text-xl font-black text-white uppercase tracking-[0.2em] drop-shadow-sm">Library</div>
+        <div className="text-2xl font-black text-white uppercase tracking-tighter italic">Library</div>
         <div className="text-[10px] text-slate-400 font-bold tracking-[0.15em] mt-1 uppercase opacity-70">Build Management</div>
       </div>
       
@@ -859,42 +925,138 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
     </div>
   );
 
-const SettingsPanel: React.FC = () => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {/* General settings */}
-    <div className="p-4 rounded-md border border-[#122432] bg-[#04121a]/60 backdrop-blur-sm">
-      <div className="text-sm font-semibold">General</div>
-      <div className="text-xs text-slate-400 mt-2">Edit / Reset on release</div>
-      <div className="mt-3 flex items-center gap-3">
-        <label className="text-sm">EOR</label>
-        <button
-          onClick={() => handleToggleEOR(!EOR)}
-          className={`cursor-pointer ml-auto inline-flex h-7 w-14 items-center rounded-full p-1 ${EOR ? "bg-[#0ea5e9]" : "bg-[#0b2a36]"}`}
-        >
-          <span
-            className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${EOR ? "translate-x-7" : "translate-x-0"}`}
-          ></span>
-        </button>
+const SettingsPanel: React.FC<{
+  eor: boolean; setEor: (v: boolean) => void;
+  ror: boolean; setRor: (v: boolean) => void;
+  bubbleBuilds: boolean; setBubbleBuilds: (v: boolean) => void;
+  mobileBuilds: boolean; setMobileBuilds: (v: boolean) => void;
+}> = ({ eor, setEor, ror, setRor, bubbleBuilds, setBubbleBuilds, mobileBuilds, setMobileBuilds }) => {
+
+  return (
+    <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* HEADER SECTION */}
+      <div className="flex items-center justify-between mb-8 px-1">
+        <div>
+          <div className="text-2xl font-black text-white uppercase tracking-tighter italic">Preferences</div>
+          <div className="text-[10px] text-blue-400 font-bold tracking-[0.2em] mt-0.5 uppercase opacity-90">Game Settings</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+        
+        {/* GAMEPLAY MECHANICS CARD */}
+        <div className="p-10 rounded-2xl border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl transition-all hover:bg-[#0b1724]/80 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-4 mb-12">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+                <Settings size={24} />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-white uppercase tracking-tight italic">Mechanics</h4>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Input</p>
+              </div>
+            </div>
+
+            <div className="space-y-10">
+              <div className="flex items-center justify-between group">
+                <div>
+                  <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Edit on Release</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Instant Edit</p>
+                </div>
+                <button
+                  type="button" // Explicitly prevent form behavior
+                  onClick={() => setEor(!eor)} 
+                  className={`cursor-pointer relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${eor ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]" : "bg-white/10"}`}
+                >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${eor ? "translate-x-6" : "translate-x-1"}`} />
+                </button>
+              </div>
+
+              <div className="h-px bg-white/5" />
+
+              <div className="flex items-center justify-between group">
+                <div>
+                  <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Reset on Release</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
+                    IN DEVELOPMENT Instant Reset</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRor(!ror)} 
+                  className={`cursor-pointer relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${ror ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]" : "bg-white/10"}`}
+                >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${ror ? "translate-x-6" : "translate-x-1"}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="pt-6" /> 
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="flex flex-col gap-6">
+          <div className="p-8 rounded-2xl border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl transition-all hover:bg-[#0b1724]/80">
+            <div className="flex items-center gap-4 mb-10">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+                <Grid size={24} />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-white uppercase tracking-tight italic">Performance</h4>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Visual</p>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <div className="flex items-center justify-between group">
+                <div>
+                  <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Bubble Builds</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">IN DEVELOPMENT Bubble Style</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBubbleBuilds(!bubbleBuilds)}
+                  className={`cursor-pointer relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${bubbleBuilds ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]" : "bg-white/10"}`}
+                >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${bubbleBuilds ? "translate-x-6" : "translate-x-1"}`} />
+                </button>
+              </div>
+
+              <div className="h-px bg-white/5" />
+
+              <div className="flex items-center justify-between group">
+                <div>
+                  <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Mobile Builds</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">IN DEVELOPMENT Low Meshes</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileBuilds(!mobileBuilds)}
+                  className={`cursor-pointer relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${mobileBuilds ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]" : "bg-white/10"}`}
+                >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${mobileBuilds ? "translate-x-6" : "translate-x-1"}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-5 rounded-2xl border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl flex items-center justify-between transition-all hover:bg-[#0b1724]/80 group">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+                <Play size={18} fill="currentColor" className="ml-0.5" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">Launcher Build</p>
+                <p className="text-sm text-white font-black uppercase italic tracking-tighter">{Defaults.LAUNCHER_VERSION}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
-
-    {/* Account / Logout */}
-    <div className="p-4 rounded-md border border-[#122432] bg-[#04121a]/60 backdrop-blur-sm">
-      <div className="text-sm font-semibold">Account</div>
-      <div className="text-xs text-slate-400 mt-2">Signed in as</div>
-      <div className="text-sm text-white mt-1">{user?.email ?? "–"}</div>
-      <div className="mt-3">
-        <button
-          onClick={handleLogout}
-          className="cursor-pointer px-3 py-1 rounded-md bg-[#0ea5e9] text-black text-xs"
-        >
-          Logout
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
+  );
+};
 /* -------------------- Render main layout -------------------- */
   return (
   <div
@@ -918,7 +1080,6 @@ const SettingsPanel: React.FC = () => (
         active={active} 
         setActive={setActive} 
         user={user} 
-        EOR={EOR} 
         handleLogout={handleLogout} 
       />
 
@@ -942,62 +1103,88 @@ const SettingsPanel: React.FC = () => (
         </AnimatePresence>
 
         <div className="flex-1 overflow-auto p-8 custom-scrollbar">
-          <AnimatePresence mode="wait">
-            {active === "home" && (
-              <TabTransition key="home">
-                <HeroBanner />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    <div className="rounded-md border border-white/5 p-4 bg-[#04121a]/60 backdrop-blur-sm">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <div className="text-lg font-semibold text-white">Featured & Highlights</div>
-                          <div className="text-xs text-slate-400">Top picks from your library</div>
-                        </div>
-                      </div>
+  <AnimatePresence mode="wait">
+    {active === "home" && (
+      <TabTransition key="home">
+        <HeroBanner />
+        
+        {/* Container with items-stretch to force equal height columns */}
+        <div className="flex flex-col lg:flex-row items-stretch gap-6 mt-4">
+          
+          {/* FEATURED & HIGHLIGHTS */}
+          <div className="flex-[3] flex flex-col">
+            <div className="flex-1 p-6 rounded-2xl border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl flex flex-col">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Featured & Highlights</h3>
+                  <p className="text-[10px] text-blue-400 font-bold uppercase tracking-[0.2em] mt-0.5">Your Optimized Collection</p>
+                </div>
+              </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {builds.length === 0 ? (
-                          <div className="p-6 text-slate-400 italic">No builds featured yet.</div>
-                        ) : builds.slice(0, 4).map(b => (
-                          <motion.div 
-                            key={b.id} 
-                            whileHover={{ scale: 1.02 }}
-                            className="rounded-md overflow-hidden border border-white/5 bg-[#06171f]/60 backdrop-blur-sm flex"
-                          >
-                            <div className="w-40 h-28 overflow-hidden bg-black/20">
-                              {b.coverDataUrl ? (
-                                <img src={b.coverDataUrl} alt={b.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full grid place-items-center text-slate-500 text-[10px]">No Cover</div>
-                              )}
-                            </div>
-                            <div className="p-3 flex-1 min-w-0">
-                              <div className="font-semibold text-white truncate">{b.name}</div>
-                              <div className="text-xs text-slate-400 mt-1 truncate">{getFolderName(b.path)}</div>
-                              <button onClick={() => removeBuild(b.id)} className="mt-3 cursor-pointer px-3 py-1 rounded-md bg-[#0b2a36] text-[10px] text-slate-300 hover:bg-red-900/30 hover:text-red-400 transition-colors">
-                                Remove
-                              </button>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 flex-1">
+                {builds.length === 0 ? (
+                  <div className="h-24 col-span-full flex items-center justify-center rounded-xl border-2 border-dashed border-white/5 opacity-40">
+                    <p className="text-xs font-black uppercase italic tracking-widest">Storage Empty</p>
                   </div>
-
-                  <div>
-                    <div className="rounded-md border border-white/5 p-4 bg-[#04121a]/60 backdrop-blur-sm">
-                      <div className="text-sm font-semibold text-white">Quick Actions</div>
-                      <div className="mt-3 space-y-2">
-                        <button onClick={() => setActive("library")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36] text-sm text-slate-200 hover:bg-[#0ea5e9]/20 transition-all border border-transparent hover:border-[#0ea5e9]/30">Open Library</button>
-                        <button onClick={() => setActive("news")} className="cursor-pointer w-full px-3 py-2 rounded-md bg-[#0b2a36] text-sm text-slate-200 hover:bg-[#0ea5e9]/20 transition-all border border-transparent hover:border-[#0ea5e9]/30">View Patch Notes</button>
+                ) : (
+                  builds.slice(0, 4).map(b => (
+                    <motion.div 
+                      key={b.id} 
+                      whileHover={{ 
+                        y: -4, 
+                        /* duration: 0.3 with easeOut creates a premium gliding feel */
+                        transition: { duration: 0.3, ease: "easeOut" } 
+                      }}
+                      className="group relative rounded-xl overflow-hidden border border-white/10 bg-[#071422]/40 flex h-24 transition-all duration-300 ease-out hover:border-[#0ea5e9]/30 hover:bg-[#0ea5e9]/10"
+                    >
+                      {/* Thumbnail Section */}
+                      <div className="w-24 h-full overflow-hidden bg-black/40 border-r border-white/5 shrink-0 relative">
+                        {b.coverDataUrl ? (
+                          <img 
+                            src={b.coverDataUrl} 
+                            alt={b.name} 
+                            /* Smooth, slow zoom to match the premium glide */
+                            className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105" 
+                          />
+                        ) : (
+                          <div className="w-full h-full grid place-items-center text-slate-700">
+                            <Grid size={16} />
+                          </div>
+                        )}
                       </div>
+
+                      {/* Info Section */}
+                      <div className="p-3 flex-1 min-w-0 flex items-center justify-between relative z-10">
+                        <div className="min-w-0 pr-2">
+                          <div className="font-black text-white uppercase italic tracking-tighter truncate text-sm group-hover:text-[#0ea5e9] transition-colors duration-300">
+                            {b.name}
+                          </div>
+                          <div className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 truncate group-hover:text-slate-300 transition-colors duration-300">
+                            {getFolderName(b.path)}
+                          </div>
+                        </div>
+                        
+                        {/* Remove Button - Matches height and always visible */}
+                        <button 
+                          onClick={() => removeBuild(b.id)} 
+                          className="cursor-pointer p-2.5 rounded-lg bg-white/5 text-slate-500 hover:text-red-500 hover:bg-red-500/20 transition-all duration-300 shrink-0 border border-transparent hover:border-red-500/20"
+                          title="Remove Build"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                      
+                      {/* Left Side Accent - Smoothly slides into view from top to bottom */}
+                      <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#0ea5e9] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </motion.div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
-              </TabTransition>
-            )}
-
+              </div>
+            </TabTransition>
+          )}
             {active === "library" && (
               <TabTransition key="library">
                 <LibraryPanel />
@@ -1018,7 +1205,12 @@ const SettingsPanel: React.FC = () => (
 
             {active === "settings" && (
               <TabTransition key="settings">
-                <SettingsPanel />
+                <SettingsPanel 
+                  eor={eor} setEor={setEor}
+                  ror={ror} setRor={setRor}
+                  bubbleBuilds={bubbleBuilds} setBubbleBuilds={setBubbleBuilds}
+                  mobileBuilds={mobileBuilds} setMobileBuilds={setMobileBuilds}
+                />
               </TabTransition>
             )}
 
