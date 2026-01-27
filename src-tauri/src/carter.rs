@@ -2,10 +2,9 @@ use winapi::um::memoryapi::{VirtualAllocEx, WriteProcessMemory};
 use winapi::um::processthreadsapi::{CreateRemoteThread, OpenProcess};
 use winapi::um::winnt::{MEM_COMMIT, MEM_RESERVE, PAGE_READWRITE, PROCESS_ALL_ACCESS};
 use winapi::um::libloaderapi::{GetModuleHandleA, GetProcAddress};
-use std::io::Write;
 use std::time::{Duration};
 use std::os::windows::process::CommandExt;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle};
 use winapi::shared::minwindef::FALSE;
 use winapi::um::handleapi::CloseHandle;
 use winapi::um::processthreadsapi::{OpenThread, SuspendThread};
@@ -17,9 +16,6 @@ use winapi::um::winnt::HANDLE;
 use winapi::um::winnt::THREAD_SUSPEND_RESUME;
 
 use sysinfo::System;
-
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
@@ -106,123 +102,20 @@ const OVERWRITE_LIST: [[&str; 2]; 3] = [
     ["paks", "asdasdsadasd"],
 ];
 
-pub async fn download(
-    url: &str,
-    file_name: &str,
-    path: &str,
-    window: &tauri::Window,
-) -> Result<bool, String> {
-    let file_url = format!("{}/{}", url, file_name);
-    let file_client = reqwest::Client::new();
+pub async fn download(url: &str, path: &str) -> Result<(), String> {
+    println!("Downloading from: {}", url);
+    
+    let response = reqwest::get(url)
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
 
-    let file_res = file_client.get(file_url.clone()).send().await;
-    let file_res = match file_res {
-        Ok(res) => res,
-        Err(e) => return Err(format!("Failed to download '{}': {}", file_name, e)),
-    };
-
-    let wanted_file_size = file_res.content_length().unwrap_or(0);
-    let progress = Arc::new(Mutex::new(DownloadProgress {
-        file_name: file_name.to_string(),
-        wanted_file_size,
-        downloaded_file_size: 0,
-        download_speed: 0,
-        is_zip_progress: false,
-    }));
-
-    for i in 0..OVERWRITE_LIST.len() {
-        if file_name.contains(OVERWRITE_LIST[i][0]) {
-            let mut progress_m = progress.lock().await;
-            progress_m.file_name = OVERWRITE_LIST[i][1].to_string();
-            break;
-        }
+    if !response.status().is_success() {
+        return Err(format!("Download failed with status: {}", response.status()));
     }
 
-    window
-        .emit("download_progress", progress.lock().await.to_owned())
-        .unwrap();
-
-    let worker_count = (num_cpus::get() / 2) as u8;
-    let byte_ranges = generate_ranges(wanted_file_size, worker_count as u64);
-
-    let download_tasks: Vec<_> = byte_ranges
-        .into_iter()
-        .map(|(start, end)| {
-            let file_url = file_url.clone();
-            let file_name = file_name.to_string();
-            let progress = progress.clone();
-            let partial_file_client = file_client.clone();
-            let window = window.clone();
-
-            tokio::spawn(async move {
-                let mut bytes: Vec<u8> = Vec::new();
-                let res = partial_file_client
-                    .get(file_url.clone())
-                    .header("Range", format!("bytes={}-{}", start, end))
-                    .send()
-                    .await;
-
-                let mut res = match res {
-                    Ok(res) => res,
-                    Err(e) => return Err(format!("Failed to download '{}': {}", file_name, e)),
-                };
-
-                let mut last_update = std::time::Instant::now();
-
-                while let Some(chunk) = res.chunk().await.unwrap_or(None) {
-                    let now = std::time::Instant::now();
-                    let elapsed = now.duration_since(last_update).as_millis();
-
-                    let mut progress_lock = progress.lock().await;
-                    progress_lock.downloaded_file_size += chunk.len() as u64;
-
-                    let mut elapsed2 = now.duration_since(last_update).as_millis();
-                    if elapsed2 == 0 {
-                        elapsed2 = 1;
-                    }
-                    progress_lock.download_speed = (chunk.len() as u128 * 1000000) / elapsed2;
-
-                    if elapsed >= 100 {
-                        window
-                            .emit("download_progress", progress_lock.to_owned())
-                            .unwrap();
-                        last_update = now;
-                    }
-
-                    drop(progress_lock);
-                    bytes.write_all(&chunk).unwrap();
-                }
-
-                window
-                    .emit("download_progress", progress.lock().await.to_owned())
-                    .unwrap();
-
-                Ok::<Vec<u8>, String>(bytes)
-            })
-        })
-        .collect();
-
-    let results = futures::future::join_all(download_tasks).await;
-
-    let mut total_bytes: Vec<u8> = Vec::new();
-    for result in results {
-        let bytes = match result {
-            Ok(bytes) => bytes,
-            Err(_) => {
-                println!("Failed to download '{}'", file_name);
-                return Err("Failed to download file".to_string());
-            }
-        };
-
-        total_bytes.write_all(bytes.unwrap().as_ref()).unwrap();
-    }
-
-    let mut file =
-        std::fs::File::create(path).or(Err(format!("Failed to create file '{}'", path)))?;
-    file.write_all(&total_bytes)
-        .or(Err(format!("Failed to write '{}'", path)))?;
-
-    Ok(true)
+    let content = response.bytes().await.map_err(|e| e.to_string())?;
+    std::fs::write(path, content).map_err(|e| format!("File Error: {}", e))?;
+    Ok(())
 }
 
 pub fn suspend_process(pid: u32) -> (u32, bool) {
@@ -341,7 +234,6 @@ pub async fn launch_real_launcher(root: &str) -> Result<bool, String> {
 
 #[tauri::command]
 pub async fn dll_replace(path: &str, url: String, app: AppHandle) -> Result<bool, String> {
-    let window = app.get_window("main").unwrap();
     let path_buf = std::path::PathBuf::from(path);
 
     let mut nvidia_path = path_buf.clone();
@@ -351,15 +243,7 @@ pub async fn dll_replace(path: &str, url: String, app: AppHandle) -> Result<bool
         let _ = std::fs::remove_file(&nvidia_path);
     }
 
-    let filename = url.split('/').last().unwrap_or("file.dll");
-    let base_url = url.replace(filename, "");
-
-    download(
-        &base_url,
-        filename,
-        nvidia_path.to_str().unwrap(),
-        &window,
-    ).await?;
+    download(&url, nvidia_path.to_str().unwrap()).await?;
 
     Ok(true)
 }
@@ -448,26 +332,17 @@ pub async fn launch_fn(
     tokio::time::sleep(Duration::from_secs(70)).await;
 
     if !inject_urls.is_empty() {
-        let window = app.get_window("main").ok_or("No window")?;
-
         tokio::time::sleep(Duration::from_secs(10)).await;
 
         for url in inject_urls.split(',') {
-            if url.trim().is_empty() { continue; }
+            let url = url.trim();
+            if url.is_empty() { continue; }
             
             let filename = url.split('/').last().unwrap_or("inject.dll");
-
-            let base_url = url.trim_end_matches(filename).trim_end_matches('/'); 
-            
             let temp_path = std::env::temp_dir().join(filename);
             let temp_path_str = temp_path.to_str().ok_or("Invalid temp path")?;
 
-            download(
-                base_url, 
-                filename, 
-                temp_path_str, 
-                &window
-            ).await?;
+            download(url, temp_path_str).await?;
             
             let _ = inject_dll(pid, temp_path_str);
         }

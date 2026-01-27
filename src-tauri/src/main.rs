@@ -27,11 +27,12 @@ async fn firstlaunch(
     carter::kill();
     carter::kill_epic();
 
-    let dll_url = env::var("VITE_REDIRECT_LINK")
-        .unwrap_or_else(|_| "".to_string());
-        
-    let inject_dlls = env::var("VITE_INJECT_DLLS_LINKS")
-        .unwrap_or_else(|_| "".to_string());
+    let dll_url = env::var("VITE_REDIRECT_LINK").unwrap_or_default();
+    let inject_dlls = env::var("VITE_INJECT_DLLS_LINKS").unwrap_or_default();
+
+    if dll_url.is_empty() {
+        return Err("Redirect Link (VITE_REDIRECT_LINK) is missing or empty!".into());
+    }
 
     carter::launch_fn(&path, dll_url, inject_dlls, app, email, password, eor).await
 }
@@ -43,22 +44,23 @@ fn window_close(window: Window) {
 
 #[tokio::main]
 async fn main() {
-    dotenv().ok(); 
-
-    let app_name = env::var("VITE_LAUNCHER_NAME").unwrap_or_else(|_| "Project Launcher".to_string());
+    dotenv().ok(); let app_name = "Project"; // Fallback name
     let path = format!("C:\\Program Files\\{}", app_name);
 
     if let Err(e) = create_dir_all(&path) {
-        eprintln!("Fehler beim Erstellen des Ordners: {}", e);
+        eprintln!("Error creating folder: {}", e);
     }
 
     tauri::Builder::default()
         .setup(|app| {
-            let resource_path = app.path_resolver()
-                .resolve_resource("../.env")
-                .expect("failed to resolve resource");
-
-            dotenvy::from_path(resource_path).ok();
+            let env_content = include_str!("../../.env");
+            for line in env_content.lines() {
+                if line.starts_with('#') || line.trim().is_empty() { continue; }
+                if let Some((key, value)) = line.split_once('=') {
+                    let clean_value = value.trim().trim_matches('"');
+                    std::env::set_var(key.trim(), clean_value);
+                }
+            }
 
             if let Some(window) = app.get_window("main") {
                 window.on_window_event(|event| {
