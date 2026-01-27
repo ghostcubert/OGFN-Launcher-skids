@@ -60,48 +60,6 @@ pub fn kill_epic() {
     std::thread::sleep(std::time::Duration::from_millis(10));
 }
 
-fn generate_ranges(file_size: u64, worker_count: u64) -> Vec<(u64, u64)> {
-    let mut ranges = Vec::new();
-
-    if file_size == 0 || worker_count == 0 {
-        return ranges;
-    }
-
-    let chunk_size = file_size / worker_count;
-    let mut start = 0;
-
-    for i in 0..worker_count {
-        let end = if i == worker_count - 1 {
-            file_size - 1
-        } else {
-            start + chunk_size.saturating_sub(1)
-        };
-
-        if start <= end {
-            ranges.push((start, end));
-        }
-        
-        start = end.saturating_add(1);
-    }
-
-    ranges
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
-pub struct DownloadProgress {
-    pub file_name: String,
-    pub wanted_file_size: u64,
-    pub downloaded_file_size: u64,
-    pub download_speed: u128,
-    pub is_zip_progress: bool,
-}
-
-const OVERWRITE_LIST: [[&str; 2]; 3] = [
-    ["EasyAntiCheat", "Easy Anti-Cheat"],
-    ["asdasdasdsad", "asdasdasdasdas"],
-    ["paks", "asdasdsadasd"],
-];
-
 pub async fn download(url: &str, path: &str) -> Result<(), String> {
     println!("Downloading from: {}", url);
     
@@ -233,7 +191,7 @@ pub async fn launch_real_launcher(root: &str) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub async fn dll_replace(path: &str, url: String, app: AppHandle) -> Result<bool, String> {
+pub async fn dll_replace(path: &str, url: String, _app: AppHandle) -> Result<bool, String> {
     let path_buf = std::path::PathBuf::from(path);
 
     let mut nvidia_path = path_buf.clone();
