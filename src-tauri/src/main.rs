@@ -29,12 +29,9 @@ async fn firstlaunch(
 
     let dll_url = env::var("VITE_REDIRECT_LINK").unwrap_or_default();
     let inject_dlls = env::var("VITE_INJECT_DLLS_LINKS").unwrap_or_default();
+    let paks = env::var("VITE_PAKS_AND_SIGS_LINKS").unwrap_or_default();
 
-    if dll_url.is_empty() {
-        return Err("Redirect Link (VITE_REDIRECT_LINK) is missing or empty!".into());
-    }
-
-    carter::launch_fn(&path, dll_url, inject_dlls, app, email, password, eor).await
+    carter::launch_fn(&path, dll_url, inject_dlls, paks, app, email, password, eor).await
 }
 
 #[tauri::command]
@@ -76,7 +73,8 @@ async fn main() {
             window_close,
             firstlaunch,
             is_fortnite_client_running,
-            close_launcher
+            close_launcher,
+            carter::download_paks_cmd
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Start der App");

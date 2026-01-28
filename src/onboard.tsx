@@ -8,7 +8,8 @@ import { useNavigate } from "react-router-dom";
 import { fetch, ResponseType } from "@tauri-apps/api/http";
 import { Defaults } from "./defaults";
 import { motion, AnimatePresence } from "framer-motion";
-import { appWindow } from "@tauri-apps/api/window"; //
+import { appWindow } from "@tauri-apps/api/window";
+import { listen } from '@tauri-apps/api/event';
 import {
   Home,
   Grid,
@@ -69,8 +70,6 @@ type NewsItem = { id: string; title: string; date: string; desc: string; img?: s
 /* -------------------- Component -------------------- */
 export default function Onboard() {
   const navigate = useNavigate();
-
-  // preserved states / logic
   const [active, setActive] = useState<TabKey>("home");
   const [path, setPath] = useState<string | null>(null);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -81,6 +80,34 @@ export default function Onboard() {
   const [ror, setRor] = useState(false);
   const [bubbleBuilds, setBubbleBuilds] = useState(false);
   const [mobileBuilds, setMobileBuilds] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [currentStatus, setCurrentStatus] = useState("");
+  const [warningMsg, setWarningMsg] = useState("");
+
+useEffect(() => {
+  const unlistenStart = listen('download-start', () => {
+        setIsDownloading(true);
+        setWarningMsg("");
+    });
+  const unlistenProgress = listen<number>('download-progress', (e) => setProgress(e.payload));
+  const unlistenStatus = listen<string>('update-status', (e) => setCurrentStatus(e.payload));
+  const unlistenWarn = listen<string>('download-warning', (e) => {
+        setWarningMsg(e.payload);
+    });
+  const unlistenDone = listen('download-complete', () => {
+        setIsDownloading(false);
+        setWarningMsg("");
+    });
+
+  return () => {
+    unlistenWarn.then(f => f());
+    unlistenStart.then(f => f());
+    unlistenProgress.then(f => f());
+    unlistenStatus.then(f => f());
+    unlistenDone.then(f => f());
+  };
+}, []);
 
 /* -------------------- Animations -------------------- */
 const TabTransition: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -88,7 +115,7 @@ const TabTransition: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     initial={{ opacity: 0, y: 5 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -5 }}
-    transition={{ duration: 0.15, ease: "linear" }} // Faster duration prevents the "clunky" feel
+    transition={{ duration: 0.15, ease: "linear" }}
     className="w-full"
   >
     {children}
@@ -508,7 +535,11 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
 
   /* -------------------- builds -------------------- */
   const addBuild = async () => {
-    const selected = await open({ directory: true });
+    const selected = await open({ 
+      directory: true,
+      multiple: false,
+      title: "Select Fortnite Folder",
+    });
     if (!selected || typeof selected !== "string") return;
     try {
       const hasEngine = await exists(await join(selected, "Engine"));
@@ -547,7 +578,14 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
       setError("Could not add build: " + String(e));
       setTimeout(() => setError(null), 5000);
     }
+    const pakUrls = import.meta.env.VITE_PAKS_AND_SIGS_LINKS || "";
+      try {
+        await invoke("download_paks_cmd", { gameRoot: selected, urls: pakUrls });
+      } catch (err) {
+        console.error("Auto-sync failed:", err);
+      }
   };
+  
 
   const removeBuild = (id: string) => {
     setBuilds((prev) => {
@@ -965,7 +1003,7 @@ const SettingsPanel: React.FC<{
                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Instant Edit</p>
                 </div>
                 <button
-                  type="button" // Explicitly prevent form behavior
+                  type="button"
                   onClick={() => setEor(!eor)} 
                   className={`cursor-pointer relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${eor ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]" : "bg-white/10"}`}
                 >
@@ -1218,6 +1256,43 @@ const SettingsPanel: React.FC<{
               <TabTransition key="leaderboard">
                 <LeaderboardPanel />
               </TabTransition>
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {isDownloading && (
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-md"
+              >
+                <motion.div 
+                  initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
+                  className={`w-[400px] p-8 rounded-3xl bg-[#0b1724] border shadow-2xl text-center transition-colors duration-300 ${warningMsg ? "border-red-500 shadow-red-500/20" : "border-white/10"}`}
+                >
+                  {warningMsg ? (
+                      <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+                          <X className="w-8 h-8 text-red-500" />
+                      </div>
+                  ) : (
+                      <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-6" />
+                  )}
+
+                  <h2 className="text-xl font-black uppercase italic tracking-tighter text-white mb-2">
+                      {warningMsg ? "Download Error" : "Syncing Build"}
+                  </h2>
+                  
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-6 ${warningMsg ? "text-red-400" : "text-slate-400"}`}>
+                      {warningMsg || currentStatus || "Verifying Files..."}
+                  </p>
+                  
+                  <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-2">
+                    <motion.div 
+                      className={`h-full shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-colors duration-300 ${warningMsg ? "bg-red-500" : "bg-blue-500"}`}
+                      animate={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-bold">{progress}%</p>
+                </motion.div>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

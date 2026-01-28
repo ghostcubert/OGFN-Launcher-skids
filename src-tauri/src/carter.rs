@@ -11,7 +11,7 @@ use winapi::um::processthreadsapi::{OpenThread, SuspendThread};
 use winapi::um::tlhelp32::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
 };
-
+use tauri::Manager;
 use winapi::um::winnt::HANDLE;
 use winapi::um::winnt::THREAD_SUSPEND_RESUME;
 
@@ -60,19 +60,76 @@ pub fn kill_epic() {
     std::thread::sleep(std::time::Duration::from_millis(10));
 }
 
-pub async fn download(url: &str, path: &str) -> Result<(), String> {
-    println!("Downloading from: {}", url);
+pub async fn download(url: &str, filename: &str, path: &str, window: &tauri::Window) -> Result<(), String> {
+    println!("Downloading {} from: {}", filename, url);
     
-    let response = reqwest::get(url)
+    let full_url = if url.ends_with('/') || url.is_empty() {
+        format!("{}{}", url, filename)
+    } else {
+        url.to_string()
+    };
+
+    let response = reqwest::get(&full_url)
         .await
         .map_err(|e| format!("Network error: {}", e))?;
 
     if !response.status().is_success() {
-        return Err(format!("Download failed with status: {}", response.status()));
+        return Err(format!("Download failed for {}: {}", filename, response.status()));
     }
+
+    let _ = window.emit("update-status", format!("Downloading: {}", filename));
 
     let content = response.bytes().await.map_err(|e| e.to_string())?;
     std::fs::write(path, content).map_err(|e| format!("File Error: {}", e))?;
+    
+    Ok(())
+}
+
+pub async fn download_paks(game_root: &str, urls: String, app: &tauri::AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+    if urls.trim().is_empty() { return Ok(()); }
+
+    let window = app.get_window("main").ok_or("Main window not found")?;
+    let mut paks_path = std::path::PathBuf::from(game_root);
+    paks_path.push("FortniteGame\\Content\\Paks");
+
+    if !paks_path.exists() {
+        std::fs::create_dir_all(&paks_path).map_err(|e| e.to_string())?;
+    }
+
+    let url_list: Vec<&str> = urls.split(',').filter(|s| !s.trim().is_empty()).collect();
+    
+    let _ = window.emit("download-start", true);
+
+    for (i, url) in url_list.iter().enumerate() {
+        let filename = url.split('/').last().unwrap_or("unknown.pak");
+        let target_path = paks_path.join(filename);
+        let progress = ((i + 1) as f32 / url_list.len() as f32 * 100.0) as u32;
+
+        if target_path.exists() {
+            let _ = window.emit("download-progress", progress);
+            continue; 
+        }
+
+        let _ = window.emit("update-status", format!("Installing: {}", filename));
+        let _ = window.emit("download-progress", progress);
+        
+        let target_str = target_path.to_str().unwrap();
+
+        match download(url, filename, target_str, &window).await {
+            Ok(_) => {
+            }
+            Err(e) => {
+                let _ = window.emit("download-warning", format!("Failed: {} (Skipping in 3s)", filename));
+                println!("Download failed for {}: {}", filename, e);
+
+                tokio::time::sleep(Duration::from_secs(3)).await;
+
+                let _ = window.emit("update-status", "Resuming...");
+            }
+        }
+    }
+    let _ = window.emit("download-complete", true);
     Ok(())
 }
 
@@ -191,9 +248,10 @@ pub async fn launch_real_launcher(root: &str) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub async fn dll_replace(path: &str, url: String, _app: AppHandle) -> Result<bool, String> {
+pub async fn dll_replace(path: &str, url: String, _app: tauri::AppHandle) -> Result<bool, String> {
+    use tauri::Manager;
+    
     let path_buf = std::path::PathBuf::from(path);
-
     let mut nvidia_path = path_buf.clone();
     nvidia_path.push("Engine\\Binaries\\ThirdParty\\NVIDIA\\NVaftermath\\Win64\\GFSDK_Aftermath_Lib.x64.dll");
 
@@ -201,7 +259,10 @@ pub async fn dll_replace(path: &str, url: String, _app: AppHandle) -> Result<boo
         let _ = std::fs::remove_file(&nvidia_path);
     }
 
-    download(&url, nvidia_path.to_str().unwrap()).await?;
+    let window = _app.get_window("main").ok_or("Main window not found")?;
+    let target_str = nvidia_path.to_str().unwrap();
+
+    download(&url, "", target_str, &window).await?;
 
     Ok(true)
 }
@@ -231,11 +292,14 @@ pub async fn launch_fn(
     path: &str,
     redirect_url: String, 
     inject_urls: String,
+    paks_urls: String,
     app: AppHandle,
     email: String,
     password: String,
     eor: bool,
 ) -> Result<bool, String> {
+    download_paks(path, paks_urls, &app).await?;
+
     if let Err(e) = dll_replace(path, redirect_url, app.clone()).await {
         return Err(format!("Could not replace DLL: {}", e));
     }
@@ -290,6 +354,7 @@ pub async fn launch_fn(
     tokio::time::sleep(Duration::from_secs(70)).await;
 
     if !inject_urls.is_empty() {
+        let window = app.get_window("main").ok_or("No window")?;
         tokio::time::sleep(Duration::from_secs(10)).await;
 
         for url in inject_urls.split(',') {
@@ -300,7 +365,7 @@ pub async fn launch_fn(
             let temp_path = std::env::temp_dir().join(filename);
             let temp_path_str = temp_path.to_str().ok_or("Invalid temp path")?;
 
-            download(url, temp_path_str).await?;
+            download(url, filename, temp_path_str, &window).await?;
             
             let _ = inject_dll(pid, temp_path_str);
         }
@@ -308,4 +373,11 @@ pub async fn launch_fn(
 
     println!("Fortnite launched and DLLs injected successfully.");
     Ok(true)
+
+    
+}
+
+#[tauri::command]
+pub async fn download_paks_cmd(game_root: String, urls: String, app: tauri::AppHandle) -> Result<(), String> {
+    download_paks(&game_root, urls, &app).await
 }
