@@ -283,7 +283,6 @@ const ShopPanel: React.FC = () => {
 
   useEffect(() => {
   const fetchShop = async () => {
-    // 1. MASTER TOGGLE CHECK
     if (!Defaults.ENABLE_API) {
       console.log("Shop API is disabled.");
       setLoading(false);

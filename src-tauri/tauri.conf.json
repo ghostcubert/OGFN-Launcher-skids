@@ -14,7 +14,7 @@
       "http": {
         "all": true,
         "request": true,
-        "scope": ["http://127.0.0.1:3551/*", "http://localhost:3551/*", "https://fortnite-api.com/*"]
+        "scope": ["http://26.114.127.160:945/*", "http://localhost:3551/*", "https://fortnite-api.com/*"]
       },
       "shell": {
         "all": true,
