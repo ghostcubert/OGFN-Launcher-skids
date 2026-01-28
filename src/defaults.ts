@@ -6,6 +6,8 @@ export type DefaultsType = {
   BACKGROUND_URL: string;
   PLACEHOLDER_IMAGE: string;
   LAUNCHER_VERSION: string;
+  ENABLE_API: boolean;
+  PAKS_AND_SIGS_LINKS: string;
 };
 
 const env = import.meta.env;
@@ -17,7 +19,9 @@ export const Defaults: DefaultsType = {
   LOGO_URL: env.VITE_LOGO_URL || "https://i.ibb.co/1GVGmGPh/logo.png",
   BACKGROUND_URL: env.VITE_BACKGROUND_URL || "https://i.ibb.co/hx42Ndqt/fn.jpg",
   PLACEHOLDER_IMAGE: env.VITE_PLACEHOLDER_IMAGE || "https://i.imgur.com/CPdmKDe.jpeg",
-  LAUNCHER_VERSION: env.VITE_LAUNCHER_VERSION || "1.0.0"
+  LAUNCHER_VERSION: env.VITE_LAUNCHER_VERSION || "1.0.0",
+  ENABLE_API: env.VITE_ENABLE_API === "true",
+  PAKS_AND_SIGS_LINKS: env.VITE_PAKS_AND_SIGS_LINKS || ""
 };
 
 export const LibraryConfig = {

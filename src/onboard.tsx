@@ -78,6 +78,7 @@ export default function Onboard() {
   const [error, setError] = useState<string | null>(null);
   const [eor, setEor] = useState(false);
   const [ror, setRor] = useState(false);
+  const [disablePreedits, setDisablePreedits] = useState(false);
   const [bubbleBuilds, setBubbleBuilds] = useState(false);
   const [mobileBuilds, setMobileBuilds] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -127,26 +128,32 @@ const LeaderboardPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchLeaderboard = async () => {
-    try {
-      const response = await fetch(`${Defaults.BACKEND_URL}/api/launcher/leaderboard`, {
-        method: 'GET',
-        responseType: ResponseType.JSON,
-      });
+  if (!Defaults.ENABLE_API) {
+    console.log("Leaderboard API is disabled via Defaults.");
+    setEntries([]);
+    setLoading(false);
+    return;
+  }
 
-      if (response.ok) {
-        setEntries(response.data as ArenaLeaderboardEntry[]);
-      }
-    } catch (err) {
-      console.error("Leaderboard Error:", err);
-    } finally {
-      setLoading(false);
+  try {
+    const response = await fetch(`${Defaults.BACKEND_URL}/api/launcher/leaderboard`, {
+      method: 'GET',
+      responseType: ResponseType.JSON,
+    });
+
+    if (response.ok) {
+      setEntries(response.data as ArenaLeaderboardEntry[]);
     }
-  };
+  } catch (err) {
+    console.error("Leaderboard Error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchLeaderboard();
 
-    // Refresh every 10 minutes (600,000 ms)
     const interval = setInterval(fetchLeaderboard, 600000);
     
     return () => clearInterval(interval);
@@ -275,54 +282,62 @@ const ShopPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchShop = async () => {
-      try {
-        const res = await fetch(`${Defaults.BACKEND_URL}/api/launcher/shop`, {
-          method: 'GET',
-          responseType: ResponseType.JSON
-        });
+  const fetchShop = async () => {
+    // 1. MASTER TOGGLE CHECK
+    if (!Defaults.ENABLE_API) {
+      console.log("Shop API is disabled.");
+      setLoading(false);
+      return;
+    }
 
-        if (!res.ok) throw new Error("Shop fetch failed");
-        
-        const data = res.data as any;
-        setShopData(data);
+    try {
+      const res = await fetch(`${Defaults.BACKEND_URL}/api/launcher/shop`, {
+        method: 'GET',
+        responseType: ResponseType.JSON
+      });
 
-        const allItems = [...data.featured, ...data.daily];
-        const cosmeticMap: Record<string, CosmeticInfo> = {};
+      if (!res.ok) throw new Error("Shop fetch failed");
+      
+      const data = res.data as any;
+      setShopData(data);
 
-        await Promise.all(allItems.map(async (item) => {
-          const rawId = item.itemGrants[0].split(":")[1];
-          try {
-            const apiRes = await fetch(`https://fortnite-api.com/v2/cosmetics/br/${rawId}`, {
-                method: 'GET',
-                responseType: ResponseType.JSON
-            });
-            
-            const apiData = apiRes.data as any;
-            if (apiRes.ok && apiData.status === 200) {
-              cosmeticMap[rawId] = {
-                id: apiData.data.id,
-                name: apiData.data.name,
-                description: apiData.data.description,
-                image: apiData.data.images.icon || apiData.data.images.smallIcon,
-                rarity: apiData.data.rarity.value,
-              };
-            }
-          } catch (e) {
-            console.warn("Failed to fetch info for", rawId);
+      const allItems = [...data.featured, ...data.daily];
+      const cosmeticMap: Record<string, CosmeticInfo> = {};
+
+      // Fetch details for each item from the Fortnite API
+      await Promise.all(allItems.map(async (item) => {
+        const rawId = item.itemGrants[0].split(":")[1];
+        try {
+          const apiRes = await fetch(`https://fortnite-api.com/v2/cosmetics/br/${rawId}`, {
+              method: 'GET',
+              responseType: ResponseType.JSON
+          });
+          
+          const apiData = apiRes.data as any;
+          if (apiRes.ok && apiData.status === 200) {
+            cosmeticMap[rawId] = {
+              id: apiData.data.id,
+              name: apiData.data.name,
+              description: apiData.data.description,
+              image: apiData.data.images.icon || apiData.data.images.smallIcon,
+              rarity: apiData.data.rarity.value,
+            };
           }
-        }));
+        } catch (e) {
+          console.warn("Failed to fetch info for", rawId);
+        }
+      }));
 
-        setCosmetics(cosmeticMap);
-      } catch (err) {
-        console.error("Shop Error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setCosmetics(cosmeticMap);
+    } catch (err) {
+      console.error("Shop Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchShop();
-  }, []);
+  fetchShop();
+}, []);
 
   const getRarityStyle = (rarity: string) => {
     switch (rarity?.toLowerCase()) {
@@ -361,11 +376,6 @@ const ShopPanel: React.FC = () => {
                 src={info.image} 
                 onLoad={(e) => e.currentTarget.classList.remove('opacity-0')}
                 className="w-full h-full object-cover relative z-0 transition-transform duration-700 ease-out group-hover:scale-110 opacity-0" 
-                /* 1. object-cover: Makes the image fill the entire square (zoomed in look)
-                  2. scale-110: Makes the hover zoom much more impactful
-                  3. transition duration-700: Makes it feel "premium" and smooth
-                  4. Removed p-2: Allows the image to touch the edges perfectly
-                */
               />
             ) : (
               <div className="w-full h-full bg-[#071422]" />
@@ -518,6 +528,7 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
       email: user.email,
       password: user.password,
       eor: eor,
+      disablePreedits: disablePreedits,
     });
   } catch (err) {
     setError("Fehler beim Start: " + String(err));
@@ -578,7 +589,7 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
       setError("Could not add build: " + String(e));
       setTimeout(() => setError(null), 5000);
     }
-    const pakUrls = import.meta.env.VITE_PAKS_AND_SIGS_LINKS || "";
+    const pakUrls = Defaults.PAKS_AND_SIGS_LINKS || "";
       try {
         await invoke("download_paks_cmd", { gameRoot: selected, urls: pakUrls });
       } catch (err) {
@@ -754,7 +765,7 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
           {/* Background Image with Smoother Gradient Overlay */}
           <div className="relative h-72">
             <img 
-              key={bannerImage} // Key helps React trigger a smooth transition when the image changes
+              key={bannerImage}
               src={bannerImage} 
               className="w-full h-full object-cover brightness-[0.6] scale-100 animate-in fade-in duration-500" 
             />
@@ -966,6 +977,8 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
 const SettingsPanel: React.FC<{
   eor: boolean; setEor: (v: boolean) => void;
   ror: boolean; setRor: (v: boolean) => void;
+  disablePreedits: boolean;
+  setDisablePreedits: (v: boolean) => void;
   bubbleBuilds: boolean; setBubbleBuilds: (v: boolean) => void;
   mobileBuilds: boolean; setMobileBuilds: (v: boolean) => void;
 }> = ({ eor, setEor, ror, setRor, bubbleBuilds, setBubbleBuilds, mobileBuilds, setMobileBuilds }) => {
@@ -985,53 +998,55 @@ const SettingsPanel: React.FC<{
         
         {/* GAMEPLAY MECHANICS CARD */}
         <div className="p-10 rounded-2xl border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl transition-all hover:bg-[#0b1724]/80 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-4 mb-12">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
-                <Settings size={24} />
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-white uppercase tracking-tight italic">Mechanics</h4>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Input</p>
-              </div>
+          <div className="flex items-center justify-between group">
+            <div>
+              <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Edit on Release</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Instant Edit</p>
             </div>
+            <button
+              type="button"
+              onClick={() => setEor(!eor)} 
+              className={`cursor-pointer relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${eor ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]" : "bg-white/10"}`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${eor ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
 
-            <div className="space-y-10">
-              <div className="flex items-center justify-between group">
-                <div>
-                  <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Edit on Release</p>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Instant Edit</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEor(!eor)} 
-                  className={`cursor-pointer relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${eor ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]" : "bg-white/10"}`}
-                >
-                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${eor ? "translate-x-6" : "translate-x-1"}`} />
-                </button>
-              </div>
+          <div className="h-px bg-white/5" />
 
-              <div className="h-px bg-white/5" />
-
-              <div className="flex items-center justify-between group">
-                <div>
-                  <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Reset on Release</p>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-                    IN DEVELOPMENT Instant Reset</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setRor(!ror)} 
-                  className={`cursor-pointer relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${ror ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]" : "bg-white/10"}`}
-                >
-                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${ror ? "translate-x-6" : "translate-x-1"}`} />
-                </button>
-              </div>
+          {/* Reset on Release */}
+          <div className="flex items-center justify-between group">
+            <div>
+              <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Reset on Release</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 text-amber-500/80">IN DEVELOPMENT: Instant Reset</p>
             </div>
+            <button
+              type="button"
+              onClick={() => setRor(!ror)} 
+              className={`cursor-pointer relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${ror ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]" : "bg-white/10"}`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${ror ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
+
+          <div className="h-px bg-white/5" />
+
+          {/* Disable Pre-edits */}
+          <div className="flex items-center justify-between group">
+            <div>
+              <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Disable Pre-edits</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Removes Pre-edit delay</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDisablePreedits(!disablePreedits)} 
+              className={`cursor-pointer relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${disablePreedits ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]" : "bg-white/10"}`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${disablePreedits ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
           </div>
           <div className="pt-6" /> 
         </div>
-
         {/* RIGHT COLUMN */}
         <div className="flex flex-col gap-6">
           <div className="p-8 rounded-2xl border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl transition-all hover:bg-[#0b1724]/80">
@@ -1181,7 +1196,6 @@ const SettingsPanel: React.FC<{
                           <img 
                             src={b.coverDataUrl} 
                             alt={b.name} 
-                            /* Smooth, slow zoom to match the premium glide */
                             className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105" 
                           />
                         ) : (
@@ -1246,6 +1260,7 @@ const SettingsPanel: React.FC<{
                 <SettingsPanel 
                   eor={eor} setEor={setEor}
                   ror={ror} setRor={setRor}
+                  disablePreedits={disablePreedits} setDisablePreedits={setDisablePreedits}
                   bubbleBuilds={bubbleBuilds} setBubbleBuilds={setBubbleBuilds}
                   mobileBuilds={mobileBuilds} setMobileBuilds={setMobileBuilds}
                 />

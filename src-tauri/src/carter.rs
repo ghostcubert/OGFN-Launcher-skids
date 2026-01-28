@@ -351,7 +351,7 @@ pub async fn launch_fn(
 
     let pid = fort_cmd.id();
 
-    tokio::time::sleep(Duration::from_secs(70)).await;
+    tokio::time::sleep(Duration::from_secs(60)).await;
 
     if !inject_urls.is_empty() {
         let window = app.get_window("main").ok_or("No window")?;

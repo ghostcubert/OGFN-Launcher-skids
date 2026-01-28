@@ -82,6 +82,27 @@ export default function Login() {
 
     setLoading(true);
 
+    const isApiEnabled = Defaults.ENABLE_API;
+
+    if (!isApiEnabled) {
+      const guestUser = {
+        email: form.email,
+        password: form.password,
+        username: "Guest Player",
+        discordId: "",
+        avatarHash: null
+      };
+      
+      if (remember) {
+        localStorage.setItem("user", JSON.stringify(guestUser));
+      }
+      
+      setIsSuccess(true);
+      setTimeout(() => navigate("/onboard"), 1000);
+      setLoading(false);
+      return;
+    }
+
     try {
       const params = new URLSearchParams({
         email: form.email,
@@ -96,13 +117,13 @@ export default function Login() {
       if (response.ok) {
         const data = JSON.parse(response.data as string);
         const sessionUser = {
-        email: form.email,
-        password: form.password,
-        username: data.username,
-        discordId: data.discordId,
-        avatarHash: data.avatarHash
-      };
-        console.log("Backend Response:", data);
+            email: form.email,
+            password: form.password,
+            username: data.username,
+            discordId: data.discordId,
+            avatarHash: data.avatarHash
+        };
+        
         setUsername(data.username);
         setDiscordId(data.discordId);
         setAvatarHash(data.avatarHash);
@@ -111,25 +132,18 @@ export default function Login() {
           localStorage.setItem("user", JSON.stringify(sessionUser));
         }
         setIsSuccess(true);
-        setTimeout(() => {
-            navigate("/onboard");
-        }, 2000);
-    } else {
+        setTimeout(() => navigate("/onboard"), 2000);
+      } else {
         const serverMessage = response.data as string;
-
-        if (response.status === 400 && serverMessage === "Error!") {
-            setError("Wrong Credentials"); 
-        } else {
-            setError(serverMessage || "An error occurred during login.");
-        }
-    }
+        setError(response.status === 400 && serverMessage === "Error!" ? "Wrong Credentials" : (serverMessage || "An error occurred."));
+      }
     } catch (err) {
       console.error(err);
       setError("Unable to connect to the server.");
     } finally {
       setLoading(false);
     }
-  };
+};
 
   return (
       <div className="w-screen h-screen relative overflow-hidden text-gray-100 bg-[#0b0c10] select-none rounded-xl border border-white/10 font-sans">
