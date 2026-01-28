@@ -11,11 +11,61 @@ use winapi::um::processthreadsapi::{OpenThread, SuspendThread};
 use winapi::um::tlhelp32::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
 };
+use winapi::um::debugapi::IsDebuggerPresent;
+// use std::env;
 use tauri::Manager;
 use winapi::um::winnt::HANDLE;
 use winapi::um::winnt::THREAD_SUSPEND_RESUME;
 
 use sysinfo::System;
+
+pub fn security_check() -> bool {
+    unsafe {
+        if IsDebuggerPresent() != 0 {
+            return false;
+        }
+    }
+    true
+}
+
+use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
+
+pub fn start_discord_rpc() {
+    let app_id = std::env::var("VITE_DISCORD_CLIENT_ID").unwrap_or_default();
+    let launcher_name = std::env::var("VITE_LAUNCHER_NAME").unwrap_or_else(|_| "Project".to_string());
+    let discord_link = std::env::var("VITE_DISCORD_LINK").unwrap_or_default();
+
+    tokio::spawn(async move {
+        if app_id.is_empty() {
+            println!("RPC Error: No Client ID found in environment.");
+            return;
+        }
+
+        let mut client = DiscordIpcClient::new(&app_id).expect("Failed to create RPC client");
+        
+        loop {
+            if client.connect().is_ok() {
+                println!("Discord RPC Connected!");
+                loop {
+                    let details = format!("Playing {}", launcher_name);
+                    let payload = activity::Activity::new()
+                        .state("In Launcher")
+                        .details(&details)
+                        .assets(activity::Assets::new()
+                            .large_image("logo")
+                            .large_text(&launcher_name))
+                        .buttons(vec![activity::Button::new("Join Discord", &discord_link)]);
+
+                    if client.set_activity(payload).is_err() {
+                        break;
+                    }
+                    tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        }
+    });
+}
 
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 

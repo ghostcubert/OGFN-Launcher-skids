@@ -506,7 +506,7 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "time",
- "uuid",
+ "uuid 1.14.0",
 ]
 
 [[package]]
@@ -640,7 +640,7 @@ checksum = "d38f2da7a0a2c4ccf0065be06397cc26a81f4e528be095826eee9d4adbb8c60f"
 dependencies = [
  "byteorder",
  "fnv",
- "uuid",
+ "uuid 1.14.0",
 ]
 
 [[package]]
@@ -1192,21 +1192,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "discord-rpc-client"
-version = "0.4.0"
+name = "discord-rich-presence"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5577407c3d8ec8db993e7dd256ba64557cd00239de84a352b9d329175c70df23"
+checksum = "a75db747ecd252c01bfecaf709b07fcb4c634adf0edb5fed47bc9c3052e7076b"
 dependencies = [
- "byteorder",
- "crossbeam-channel",
- "log",
- "named_pipe",
- "num-derive",
- "num-traits",
  "serde",
  "serde_derive",
  "serde_json",
- "uuid",
+ "serde_repr",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -3094,7 +3089,7 @@ dependencies = [
  "trust-dns-proto",
  "trust-dns-resolver",
  "typed-builder",
- "uuid",
+ "uuid 1.14.0",
  "webpki-roots",
 ]
 
@@ -3128,15 +3123,6 @@ dependencies = [
  "mime",
  "spin",
  "version_check",
-]
-
-[[package]]
-name = "named_pipe"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad9c443cce91fc3e12f017290db75dde490d685cdaaf508d7159d7cf41f0eb2b"
-dependencies = [
- "winapi",
 ]
 
 [[package]]
@@ -3280,17 +3266,6 @@ name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
-
-[[package]]
-name = "num-derive"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.96",
-]
 
 [[package]]
 name = "num-traits"
@@ -4031,7 +4006,7 @@ version = "1.0.0"
 dependencies = [
  "async-std",
  "dirs 6.0.0",
- "discord-rpc-client",
+ "discord-rich-presence",
  "dll-injector",
  "dotenvy",
  "embed-resource 1.8.0",
@@ -4057,7 +4032,7 @@ dependencies = [
  "tauri-plugin-deep-link",
  "time",
  "tokio",
- "uuid",
+ "uuid 1.14.0",
  "warp",
  "winapi",
  "window-shadows",
@@ -5304,7 +5279,7 @@ dependencies = [
  "serde",
  "tao-macros",
  "unicode-segmentation",
- "uuid",
+ "uuid 1.14.0",
  "windows 0.39.0",
  "windows-implement 0.39.0",
  "x11-dl",
@@ -5408,7 +5383,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "url",
- "uuid",
+ "uuid 1.14.0",
  "webkit2gtk",
  "webview2-com",
  "windows 0.39.0",
@@ -5455,7 +5430,7 @@ dependencies = [
  "tauri-utils",
  "thiserror 1.0.69",
  "time",
- "uuid",
+ "uuid 1.14.0",
  "walkdir",
 ]
 
@@ -5504,7 +5479,7 @@ dependencies = [
  "tauri-utils",
  "thiserror 1.0.69",
  "url",
- "uuid",
+ "uuid 1.14.0",
  "webview2-com",
  "windows 0.39.0",
 ]
@@ -5523,7 +5498,7 @@ dependencies = [
  "raw-window-handle",
  "tauri-runtime",
  "tauri-utils",
- "uuid",
+ "uuid 1.14.0",
  "webkit2gtk",
  "webview2-com",
  "windows 0.39.0",
@@ -6162,6 +6137,15 @@ name = "utf8_iter"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
+
+[[package]]
+name = "uuid"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+dependencies = [
+ "getrandom 0.2.15",
+]
 
 [[package]]
 name = "uuid"
