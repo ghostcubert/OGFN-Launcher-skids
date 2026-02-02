@@ -382,6 +382,7 @@ pub async fn launch_fn(
         "-epicenv=Prod".to_string(),
         "-epiclocale=en-us".to_string(),
         "-epicportal".to_string(),
+        "-nouac".to_string(),
         "-skippatchcheck".to_string(),
         "-nobe".to_string(),
         "-fromfl=eac".to_string(),
