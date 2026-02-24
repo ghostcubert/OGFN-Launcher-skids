@@ -8,6 +8,8 @@ export type DefaultsType = {
   LAUNCHER_VERSION: string;
   ENABLE_API: boolean;
   PAKS_AND_SIGS_LINKS: string;
+  ONLY_JOINABLE: boolean;
+  JOINABLE_VERSION: string;
 };
 
 const env = import.meta.env;
@@ -21,7 +23,9 @@ export const Defaults: DefaultsType = {
   PLACEHOLDER_IMAGE: env.VITE_PLACEHOLDER_IMAGE || "https://i.imgur.com/CPdmKDe.jpeg",
   LAUNCHER_VERSION: env.VITE_LAUNCHER_VERSION || "1.0.0",
   ENABLE_API: env.VITE_ENABLE_API === "true",
-  PAKS_AND_SIGS_LINKS: env.VITE_PAKS_AND_SIGS_LINKS || ""
+  PAKS_AND_SIGS_LINKS: env.VITE_PAKS_AND_SIGS_LINKS || "",
+  ONLY_JOINABLE: env.VITE_ONLY_JOINABLE === "true",
+  JOINABLE_VERSION: env.VITE_ONLY_JOINABLE_VERSION || "0.0",
 };
 
 export const LibraryConfig = {

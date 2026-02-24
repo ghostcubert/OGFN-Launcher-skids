@@ -1,4 +1,3 @@
-// src/onboard.tsx
 import React, { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import { open } from "@tauri-apps/api/dialog";
@@ -49,7 +48,6 @@ interface CosmeticInfo {
   rarity: string;
 }
 
-/* -------------------- Helpers -------------------- */
 function bytesToBase64(bytes: Uint8Array) {
   let binary = "";
   const chunk = 0x8000;
@@ -63,11 +61,10 @@ function getFolderName(p: string) {
   return parts[parts.length - 1] || p;
 }
 
-/* -------------------- Types -------------------- */
 type TabKey = "home" | "library" | "news" | "shop" | "settings" | "leaderboard";
 type BuildItem = { id: string; path: string; name: string; coverDataUrl?: string };
 type NewsItem = { id: string; title: string; date: string; desc: string; img?: string };
-/* -------------------- Component -------------------- */
+
 export default function Onboard() {
   const navigate = useNavigate();
   const [active, setActive] = useState<TabKey>("home");
@@ -110,7 +107,6 @@ useEffect(() => {
   };
 }, []);
 
-/* -------------------- Animations -------------------- */
 const TabTransition: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <motion.div
     initial={{ opacity: 0, y: 5 }}
@@ -168,8 +164,6 @@ const LeaderboardPanel: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
-      {/* Header Section */}
       <div className="flex items-center justify-between mb-6 px-1">
         <div>
           <div className="text-2xl font-black text-white uppercase tracking-tighter italic">Arena Leaderboard</div>
@@ -198,20 +192,13 @@ const LeaderboardPanel: React.FC = () => {
             ) : entries.length === 0 ? (
               <tr>
                 <td colSpan={4} className="p-4">
-                  {/* Container: Matches Library/Shop py-24, border-white/20, and bg-white/[0.03] */}
                   <div className="py-24 border-2 border-dashed border-white/20 rounded-2xl bg-white/[0.03] flex flex-col items-center justify-center transition-colors hover:border-white/30">
-                    
-                    {/* Icon Container: Matches w-14/h-14, bg-white/10, and text-slate-300 */}
                     <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mb-4 text-slate-300 shadow-inner">
                       <Trophy size={28} />
                     </div>
-                    
-                    {/* Title: Matches text-slate-300 text-sm font-medium */}
                     <p className="text-slate-300 text-sm font-medium">
                       Leaderboard Unavailable
                     </p>
-                    
-                    {/* Subtitle: Matches text-slate-500 text-xs mt-1 */}
                     <p className="text-slate-500 text-xs mt-1">
                       Arena rankings are currently being calculated or offline.
                     </p>
@@ -223,14 +210,11 @@ const LeaderboardPanel: React.FC = () => {
                 const rank = getRankStyle(index);
                 return (
                   <tr key={index} className="hover:bg-white/[0.01] transition-colors group">
-                    {/* Rank */}
                     <td className="px-8 py-5">
                       <div className={`inline-flex items-center justify-center w-9 h-9 rounded-lg font-black text-xs ${rank.bg} ${rank.color} border ${rank.border}`}>
                         {rank.icon}
                       </div>
                     </td>
-
-                    {/* Competitor */}
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
                         <div className="w-9 h-9 rounded-xl border border-white/10 overflow-hidden bg-[#071422] flex items-center justify-center shadow-lg">
@@ -250,16 +234,12 @@ const LeaderboardPanel: React.FC = () => {
                         </span>
                       </div>
                     </td>
-
-                    {/* Division - Just the number now */}
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-2">
                          <span className="text-sm font-black text-slate-400 tracking-tighter italic">DIV</span>
                          <span className="text-lg font-black text-white italic tracking-tighter leading-none">{player.division}</span>
                       </div>
                     </td>
-
-                    {/* Hype - Matching the high-contrast font style */}
                     <td className="px-8 py-5 text-right">
                       <span className="font-black text-blue-400 text-xl tracking-tighter tabular-nums drop-shadow-[0_0_10px_rgba(59,130,246,0.2)]">
                         {player.hype.toLocaleString()}
@@ -302,8 +282,6 @@ const ShopPanel: React.FC = () => {
 
       const allItems = [...data.featured, ...data.daily];
       const cosmeticMap: Record<string, CosmeticInfo> = {};
-
-      // Fetch details for each item from the Fortnite API
       await Promise.all(allItems.map(async (item) => {
         const rawId = item.itemGrants[0].split(":")[1];
         try {
@@ -367,7 +345,6 @@ const ShopPanel: React.FC = () => {
             className={`group relative rounded-xl overflow-hidden bg-[#0b1724] border transition-all duration-300 transform-gpu ${style.border}`}
           >
             <div className="aspect-square overflow-hidden relative bg-[#071422] group">
-            {/* Background Gradient */}
             <div className={`absolute inset-0 bg-gradient-to-t ${style.bg} to-transparent opacity-30 z-10 transition-opacity duration-500 group-hover:opacity-40`} />
             
             {info?.image ? (
@@ -379,8 +356,6 @@ const ShopPanel: React.FC = () => {
             ) : (
               <div className="w-full h-full bg-[#071422]" />
             )}
-            
-            {/* Price Badge */}
             <div className="absolute top-3 right-3 z-30 px-2 py-1.5 rounded-md bg-black/60 backdrop-blur-xl flex items-center gap-2 border border-white/10 shadow-xl transition-transform duration-300 group-hover:scale-105">
               <img src="https://i.imgur.com/pfmvUEu.png" className="w-3.5 h-3.5" alt="V" />
               <span className="text-[11px] font-black text-white tracking-tighter uppercase italic">{entry.price}</span>
@@ -420,21 +395,14 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
         </div>
       ) : (
         <div className="w-full flex justify-center items-start pt-10">
-          {/* Matches Library empty state exactly */}
           <div className="w-full max-w-2xl px-4">
             <div className="py-24 border-2 border-dashed border-white/20 rounded-2xl bg-white/[0.03] flex flex-col items-center justify-center transition-colors hover:border-white/30">
-              
-              {/* Icon Container: matches w-14/h-14 and bg-white/10 */}
               <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mb-4 text-slate-300 shadow-inner">
                 <ShoppingCart size={28} />
               </div>
-
-              {/* Title: matches text-slate-300 text-sm font-medium */}
               <p className="text-slate-300 text-sm font-medium">
                 Shop Unavailable
               </p>
-
-              {/* Subtitle: matches text-slate-500 text-xs mt-1 */}
               <p className="text-slate-500 text-xs mt-1">
                 Connection to the item store was lost. Please check back later.
               </p>
@@ -446,22 +414,19 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
     </div>
   );
 };
-
-  // mock news / hero carousel images (swap as you like)
   const [news] = useState<NewsItem[]>([
     { id: "n1", title: "Patch v2.5 — Performance & polish", date: "Oct 12, 2025", desc: "Performance improvements + UI polish. Read full patch notes in the launcher.", img: "https://i.ibb.co/HLQqKrj4/Chapter-2-Remix-Header.webp" },
     { id: "n2", title: "Matchmaking improvements", date: "Oct 9, 2025", desc: "We've fixed several issues and improved matchmaking stability.", img: "https://i.ibb.co/yBBpHp1D/Chapter-2-Season-4-Key-Art-Fortnite.webp" },
     { id: "n3", title: "Scheduled Maintenance", date: "Oct 7, 2025", desc: "Servers will be down for 3 hours for backend updates.", img: "https://i.ibb.co/DDsGMMyh/hq720.jpg" },
   ]);
 
-  /* -------------------- lifecycle / persistence -------------------- */
   useEffect(() => {
     const savedPath = localStorage.getItem("buildPath");
     if (savedPath) setPath(savedPath);
 
     const savedUser = localStorage.getItem("user");
     if (savedUser) {
-      try { setUser(JSON.parse(savedUser)); } catch { /* ignore */ }
+      try { setUser(JSON.parse(savedUser)); } catch {}
     }
 
     const savedBuilds = localStorage.getItem("SettingsMP.builds");
@@ -470,7 +435,7 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
         const parsed = JSON.parse(savedBuilds) as BuildItem[];
         setBuilds(parsed);
         if (!savedPath && parsed.length > 0) setPath(parsed[0].path);
-      } catch { /* ignore */ }
+      } catch {}
     }
   }, []);
 
@@ -482,7 +447,6 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
     if (path) localStorage.setItem("buildPath", path); else localStorage.removeItem("buildPath");
   }, [path]);
 
-  /* -------------------- launcher polling -------------------- */
   useEffect(() => {
     let cancelled = false;
     let t: number | null = null;
@@ -504,7 +468,6 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
     };
   }, [isLaunching]);
 
-  /* -------------------- actions -------------------- */
   const handleLaunch = async () => {
     setIsLaunching(true);
     const launchPath = path || builds[0]?.path;
@@ -530,7 +493,7 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
       disablePreedits: disablePreedits,
     });
   } catch (err) {
-    setError("Fehler beim Start: " + String(err));
+    setError("Startup error: " + String(err));
     setIsLaunching(false);
   }
 };
@@ -543,14 +506,15 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
     navigate("/login");
   };
 
-  /* -------------------- builds -------------------- */
   const addBuild = async () => {
     const selected = await open({ 
       directory: true,
       multiple: false,
       title: "Select Fortnite Folder",
     });
+
     if (!selected || typeof selected !== "string") return;
+
     try {
       const hasEngine = await exists(await join(selected, "Engine"));
       if (!hasEngine) {
@@ -558,8 +522,20 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
         setTimeout(() => setError(null), 5000);
         return;
       }
-      if (builds.length >= 2) {
-        setError("Maximum builds in library reached (2). Remove one first.");
+
+      if (Defaults.ONLY_JOINABLE === true) {
+        const folderName = getFolderName(selected);
+        const required = Defaults.JOINABLE_VERSION;
+
+        if (!folderName.includes(required)) {
+          setError(`Build not supported: Only version ${required} is allowed.`);
+          setTimeout(() => setError(null), 5000);
+          return;
+        }
+      }
+
+      if (builds.length >= 1) {
+        setError("Maximum builds in library reached. Remove one first.");
         setTimeout(() => setError(null), 5000);
         return;
       }
@@ -580,20 +556,23 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
         name: getFolderName(selected),
         coverDataUrl,
       };
+
       const updatedBuilds = [item, ...builds];
       setBuilds(updatedBuilds);
       setPath(selected);
       localStorage.setItem("SettingsMP.builds", JSON.stringify(updatedBuilds));
-    } catch (e) {
-      setError("Could not add build: " + String(e));
-      setTimeout(() => setError(null), 5000);
-    }
-    const pakUrls = Defaults.PAKS_AND_SIGS_LINKS || "";
+
+      const pakUrls = Defaults.PAKS_AND_SIGS_LINKS || "";
       try {
         await invoke("download_paks_cmd", { gameRoot: selected, urls: pakUrls });
       } catch (err) {
         console.error("Auto-sync failed:", err);
       }
+
+    } catch (e) {
+      setError("Could not add build: " + String(e));
+      setTimeout(() => setError(null), 5000);
+    }
   };
   
 
@@ -634,9 +613,7 @@ const CustomTitleBar = () => (
     </div>
   </div>
 );
-  /* -------------------- UI pieces (Epic-like) -------------------- */
 
-// left nav (compact Epic style)
 interface LeftNavProps {
   active: TabKey;
   setActive: (val: TabKey) => void;
@@ -646,7 +623,6 @@ interface LeftNavProps {
 
 const LeftNav: React.FC<LeftNavProps> = ({ active, setActive, user, handleLogout }) => (
 <div className="w-72 bg-[#0b1724]/95 border-r border-white/5 flex flex-col pt-8 backdrop-blur-md relative z-20">
-  {/* Logo Section */}
   <div className="px-6 pb-8 flex items-center gap-4">
     <div className="w-12 h-12 rounded-xl bg-[#07080a] border border-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(14,165,233,0.15)] overflow-hidden relative">
       <img 
@@ -662,8 +638,6 @@ const LeftNav: React.FC<LeftNavProps> = ({ active, setActive, user, handleLogout
       <div className="text-[10px] text-blue-400 font-bold tracking-widest uppercase opacity-80">Launcher</div>
     </div>
   </div>
-
-    {/* Navigation */}
     <nav className="px-3 space-y-1 flex-1">
       <NavItem icon={<Home size={18} />} label="Home" id="home" active={active} setActive={setActive} />
       <NavItem icon={<Grid size={18} />} label="Library" id="library" active={active} setActive={setActive} />
@@ -674,8 +648,6 @@ const LeftNav: React.FC<LeftNavProps> = ({ active, setActive, user, handleLogout
       
       <NavItem icon={<Settings size={18} />} label="Settings" id="settings" active={active} setActive={setActive} />
     </nav>
-
-    {/* Bottom Profile */}
     <div className="p-4 mt-auto border-t border-white/5 bg-[#081018]/50">
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-full border border-blue-500/20 overflow-hidden bg-[#16303e]">
@@ -722,7 +694,6 @@ const NavItem = ({ icon, label, id, active, setActive }: any) => {
   );
 };
 
-/* Top bar (Epic-like) */
 interface TopBarProps {
   user: UserData | null;
 }
@@ -730,7 +701,7 @@ interface TopBarProps {
 const TopBar: React.FC<TopBarProps> = ({ user }) => {
   return (
     <div className="flex items-center justify-between px-6 py-3 bg-[#071422]/75 border-b border-[#0f1b26] backdrop-blur-sm">
-      <div /> {/* Spacer */}
+      <div />
       <div className="flex items-center gap-3">
         <div className="text-right hidden sm:block">
           <div className="text-xs font-bold text-white uppercase tracking-wider">
@@ -752,16 +723,13 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
   );
 };
 
-  /* Hero carousel / featured area (Epic-like big banner) */
   const HeroBanner: React.FC = () => {
   const current = builds.find((b) => b.path === path) ?? builds[0];
   const bannerImage = current?.coverDataUrl || Defaults.PLACEHOLDER_IMAGE;
 
   return (
       <div className="mb-6 animate-in fade-in duration-700">
-        {/* MAIN BANNER */}
         <div className="relative rounded-2xl overflow-hidden border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl transition-all">
-          {/* Background Image with Smoother Gradient Overlay */}
           <div className="relative h-72">
             <img 
               key={bannerImage}
@@ -770,8 +738,6 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0b1724] via-[#0b1724]/20 to-transparent" />
           </div>
-
-          {/* Content Overlay */}
           <div className="absolute inset-0 p-8 flex items-end gap-6">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -806,8 +772,6 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
                 </button>
               </div>
             </div>
-
-            {/* Status Card (Right Side) */}
             <div className="w-64 hidden md:block">
               <div className="bg-black/40 p-4 rounded-xl border border-white/10 backdrop-blur-md">
                 <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Username</div>
@@ -823,8 +787,6 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
             </div>
           </div>
         </div>
-
-      {/* NEWS ROW */}
       <div className="mt-4 flex gap-4 overflow-x-auto pb-4 no-scrollbar">
         {news.map((n) => (
           <motion.div 
@@ -832,20 +794,14 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
             whileHover={{ y: -5 }} 
             className="min-w-[280px] rounded-xl overflow-hidden border border-white/5 bg-[#0b1724]/40 backdrop-blur-sm group cursor-pointer relative"
           >
-            {/* CONTAINER SCALE: We scale this DIV, which scales the image and gradient together as one */}
             <div className="relative h-28 overflow-hidden transition-transform duration-500 ease-out group-hover:scale-110">
               <img 
                 src={n.img} 
                 alt={n.title} 
                 className="h-full w-full object-cover" 
-                /* Image no longer scales itself; the parent handles it */
               />
-              
-              {/* Gradient is now perfectly locked to the image because the parent container is scaling */}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0b1724] to-transparent opacity-90" />
             </div>
-
-            {/* Text Content */}
             <div className="p-4 relative z-10">
               <div className="text-[9px] text-blue-400 font-black uppercase tracking-widest">
                 {n.date}
@@ -857,8 +813,6 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
                 {n.desc}
               </div>
             </div>
-
-            {/* The Line - We keep this scale-x from center for that premium look */}
             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-500 origin-center scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100 z-20" />
           </motion.div>
         ))}
@@ -867,8 +821,7 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
   );
 };
 
-  /* Library styled like Epic store grid */
-  const LibraryPanel: React.FC = () => (
+const LibraryPanel: React.FC = () => (
   <div className="animate-in fade-in duration-500">
     <div className="flex items-center justify-between mb-6 px-1">
       <div>
@@ -883,11 +836,8 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
         <Plus size={14} strokeWidth={3} /> ADD BUILD
       </button>
     </div>
-
-    {/* Grid Section */}
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
       {builds.length === 0 ? (
-        /* Enhanced High-Visibility Dashed Box */
         <div className="col-span-full py-24 border-2 border-dashed border-white/20 rounded-2xl bg-white/[0.03] flex flex-col items-center justify-center transition-colors hover:border-white/30">
           <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center mb-4 text-slate-300 shadow-inner">
             <Grid size={28} />
@@ -905,7 +855,6 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
                 selected ? "border-blue-500 shadow-[0_0_25px_rgba(59,130,246,0.15)]" : "border-white/10 shadow-xl shadow-black/40"
               }`}
             >
-              {/* Image Section */}
               <div className="h-44 bg-[#071823] relative overflow-hidden">
                 {b.coverDataUrl ? (
                   <img 
@@ -916,12 +865,8 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-slate-700 uppercase tracking-tighter">No Cover</div>
                 )}
-                
-                {/* Subtle Glow Overlay */}
                 <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </div>
-
-              {/* Info Section */}
               <div className="p-4 bg-gradient-to-b from-transparent to-black/30">
                 <div className="text-sm font-bold text-white truncate group-hover:text-blue-400 transition-colors duration-300">
                   {b.name}
@@ -931,7 +876,6 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
                 </div>
                 
                 <div className="mt-4 flex items-center justify-between">
-                  {/* Simplified Indicator (No Badge) */}
                   <div className={`flex items-center gap-2`}>
                   </div>
                   
@@ -951,7 +895,6 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
   </div>
 );
 
-  /* News / patch notes full list */
   const NewsPanel: React.FC = () => (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -984,8 +927,7 @@ const SettingsPanel: React.FC<{
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-      
-      {/* HEADER SECTION */}
+
       <div className="flex items-center justify-between mb-8 px-1">
         <div>
           <div className="text-2xl font-black text-white uppercase tracking-tighter italic">Preferences</div>
@@ -994,8 +936,7 @@ const SettingsPanel: React.FC<{
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-        
-        {/* GAMEPLAY MECHANICS CARD */}
+
         <div className="p-10 rounded-2xl border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl transition-all hover:bg-[#0b1724]/80 flex flex-col justify-between">
           <div className="flex items-center justify-between group">
             <div>
@@ -1012,8 +953,6 @@ const SettingsPanel: React.FC<{
           </div>
 
           <div className="h-px bg-white/5" />
-
-          {/* Reset on Release */}
           <div className="flex items-center justify-between group">
             <div>
               <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Reset on Release</p>
@@ -1029,8 +968,6 @@ const SettingsPanel: React.FC<{
           </div>
 
           <div className="h-px bg-white/5" />
-
-          {/* Disable Pre-edits */}
           <div className="flex items-center justify-between group">
             <div>
               <p className="text-sm font-black text-slate-200 group-hover:text-white transition-colors uppercase italic tracking-tighter">Disable Pre-edits</p>
@@ -1046,7 +983,6 @@ const SettingsPanel: React.FC<{
           </div>
           <div className="pt-6" /> 
         </div>
-        {/* RIGHT COLUMN */}
         <div className="flex flex-col gap-6">
           <div className="p-8 rounded-2xl border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl transition-all hover:bg-[#0b1724]/80">
             <div className="flex items-center gap-4 mb-10">
@@ -1109,7 +1045,6 @@ const SettingsPanel: React.FC<{
     </div>
   );
 };
-/* -------------------- Render main layout -------------------- */
   return (
   <div
     className="w-screen h-screen flex text-slate-100 relative overflow-hidden rounded-xl border border-[#1e2a38]"
@@ -1120,14 +1055,10 @@ const SettingsPanel: React.FC<{
       backgroundRepeat: "no-repeat",
     }}
   >
-    {/* Blurred background overlay */}
     <div className="absolute inset-0 backdrop-blur-2xl bg-black/50 z-0" />
 
     <CustomTitleBar />
-
-    {/* Main content */}
     <div className="relative z-10 flex w-full h-full pt-8">
-      {/* Pass props to LeftNav */}
       <LeftNav 
         active={active} 
         setActive={setActive} 
@@ -1136,7 +1067,6 @@ const SettingsPanel: React.FC<{
       />
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Pass user to TopBar */}
         <TopBar user={user} />
 
         <AnimatePresence>
@@ -1159,11 +1089,7 @@ const SettingsPanel: React.FC<{
     {active === "home" && (
       <TabTransition key="home">
         <HeroBanner />
-        
-        {/* Container with items-stretch to force equal height columns */}
         <div className="flex flex-col lg:flex-row items-stretch gap-6 mt-4">
-          
-          {/* FEATURED & HIGHLIGHTS */}
           <div className="flex-[3] flex flex-col">
             <div className="flex-1 p-6 rounded-2xl border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl flex flex-col">
               <div className="flex items-center justify-between mb-6">
@@ -1184,12 +1110,10 @@ const SettingsPanel: React.FC<{
                       key={b.id} 
                       whileHover={{ 
                         y: -4, 
-                        /* duration: 0.3 with easeOut creates a premium gliding feel */
                         transition: { duration: 0.3, ease: "easeOut" } 
                       }}
                       className="group relative rounded-xl overflow-hidden border border-white/10 bg-[#071422]/40 flex h-24 transition-all duration-300 ease-out hover:border-[#0ea5e9]/30 hover:bg-[#0ea5e9]/10"
                     >
-                      {/* Thumbnail Section */}
                       <div className="w-24 h-full overflow-hidden bg-black/40 border-r border-white/5 shrink-0 relative">
                         {b.coverDataUrl ? (
                           <img 
@@ -1203,8 +1127,6 @@ const SettingsPanel: React.FC<{
                           </div>
                         )}
                       </div>
-
-                      {/* Info Section */}
                       <div className="p-3 flex-1 min-w-0 flex items-center justify-between relative z-10">
                         <div className="min-w-0 pr-2">
                           <div className="font-black text-white uppercase italic tracking-tighter truncate text-sm group-hover:text-[#0ea5e9] transition-colors duration-300">
@@ -1214,8 +1136,6 @@ const SettingsPanel: React.FC<{
                             {getFolderName(b.path)}
                           </div>
                         </div>
-                        
-                        {/* Remove Button - Matches height and always visible */}
                         <button 
                           onClick={() => removeBuild(b.id)} 
                           className="cursor-pointer p-2.5 rounded-lg bg-white/5 text-slate-500 hover:text-red-500 hover:bg-red-500/20 transition-all duration-300 shrink-0 border border-transparent hover:border-red-500/20"
@@ -1224,8 +1144,6 @@ const SettingsPanel: React.FC<{
                           <Trash2 size={15} />
                         </button>
                       </div>
-                      
-                      {/* Left Side Accent - Smoothly slides into view from top to bottom */}
                       <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#0ea5e9] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </motion.div>
                         ))

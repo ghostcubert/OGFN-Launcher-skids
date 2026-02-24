@@ -148,8 +148,6 @@ export default function Login() {
   return (
       <div className="w-screen h-screen relative overflow-hidden text-gray-100 bg-[#0b0c10] select-none rounded-xl border border-white/10 font-sans">
       <CustomTitleBar />
-
-      {/* BACKGROUND */}
       <div className="absolute inset-0 rounded-xl overflow-hidden z-0">
         <img
           src={Defaults.BACKGROUND_URL}
@@ -158,8 +156,6 @@ export default function Login() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
       </div>
-
-      {/* CENTERED LOGIN CARD */}
       <div className="relative flex flex-col items-center justify-center h-full w-full px-10">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/20 blur-[100px] rounded-full pointer-events-none" />
     <AnimatePresence mode="wait">
@@ -274,7 +270,6 @@ export default function Login() {
   transition={{ duration: 0.5 }}
   className="text-center z-50"
 >
-  {/* NEW PROFILE PICTURE CONTAINER */}
   <motion.div 
   initial={{ scale: 0, rotate: -10 }} 
   animate={{ scale: 1, rotate: 0 }} 

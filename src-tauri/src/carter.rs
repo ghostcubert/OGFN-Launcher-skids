@@ -16,7 +16,6 @@ use winapi::um::debugapi::IsDebuggerPresent;
 use tauri::Manager;
 use winapi::um::winnt::HANDLE;
 use winapi::um::winnt::THREAD_SUSPEND_RESUME;
-
 use sysinfo::System;
 
 pub fn security_check() -> bool {
@@ -402,6 +401,10 @@ pub async fn launch_fn(
 
     let pid = fort_cmd.id();
 
+    let mut sys = System::new_all();
+    let mut process_detected = false;
+    let target_process = "FortniteClient-Win64-Shipping.exe";
+
     tokio::time::sleep(Duration::from_secs(60)).await;
 
     if !inject_urls.is_empty() {
@@ -421,11 +424,8 @@ pub async fn launch_fn(
             let _ = inject_dll(pid, temp_path_str);
         }
     }
-
     println!("Fortnite launched and DLLs injected successfully.");
-    Ok(true)
-
-    
+    Ok(true)    
 }
 
 #[tauri::command]
