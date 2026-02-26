@@ -16,7 +16,6 @@ const SettingsIcon = (props: any) => (
   <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#e3e3e3" {...props}><path d="m403-96-22-114q-23-9-44.5-21T296-259l-110 37-77-133 87-76q-2-12-3-24t-1-25q0-13 1-25t3-24l-87-76 77-133 110 37q19-16 40.5-28t44.5-21l22-114h154l22 114q23 9 44.5 21t40.5 28l110-37 77 133-87 76q2 12 3 24t1 25q0 13-1 25t-3 24l87 76-77 133-110-37q-19 16-40.5 28T579-210L557-96H403Zm59-72h36l19-99q38-7 71-26t57-48l96 32 18-30-76-67q6-17 9.5-35.5T696-480q0-20-3.5-38.5T683-554l76-67-18-30-96 32q-24-29-57-48t-71-26l-19-99h-36l-19 99q-38 7-71 26t-57 48l-96-32-18 30 76 67q-6 17-9.5 35.5T264-480q0 20 3.5 38.5T277-406l-76 67 18 30 96-32q24 29 57 48t71 26l19 99Zm18-168q60 0 102-42t42-102q0-60-42-102t-102-42q-60 0-102 42t-42 102q0 60 42 102t102 42Zm0-144Z"/></svg>
 );
 
-// --- Helper components ---
 function NavItem({ icon: Icon, label, active, collapsed, onClick }: {
   icon: any;
   label: string;
@@ -65,7 +64,6 @@ function Section({ title, children }: { title: string; children: any }) {
   );
 }
 
-// Kleiner Toggle-Switch (ohne externe Libs)
 function Toggle({
   checked,
   onChange,
@@ -103,14 +101,11 @@ function Toggle({
   );
 }
 
-// --- Main component ---
 function Settings() {
   const navigate = useNavigate();
   const [, setPath] = useState<string | null>(null);
   const [user, setUser] = useState<{ email: string; password: string } | null>(null);
   const [collapsed] = useState(false);
-
-  // --- persistent Switch: Auto Launch ---
   const [EOR, setEOR] = useState<boolean>(false);
 
   useEffect(() => {
@@ -151,7 +146,6 @@ function Settings() {
     navigate("/onboard");
   };
 
-  // Switch persistieren sobald geändert
   const handleToggleEOR = (next: boolean) => {
     setEOR(next);
     localStorage.setItem("EOR", String(next));
@@ -159,16 +153,13 @@ function Settings() {
 
   return (
     <div className="root w-screen rounded-xl h-screen bg-black text-gray-100">
-      {/* App frame */}
       <div className="h-full w-full flex">
-        {/* Sidebar */}
         <motion.aside
           initial={false}
           animate={{ width: collapsed ? 76 : 256 }}
           transition={{ type: "spring", stiffness: 260, damping: 30 }}
           className="relative h-full bg-black/60 backdrop-blur-xl border-r border-white/10 shadow-2xl rounded-tl-xl rounded-bl-xl"
         >
-          {/* Brand / Toggle */}
           <div data-tauri-drag-region className="flex items-center justify-center gap-2 px-4 py-4 border-b border-white/10">
             <div className="flex items-center gap-2">
               {!collapsed && (
@@ -183,15 +174,12 @@ function Settings() {
             </div>
           </div>
 
-          {/* Nav */}
           <div className="p-3 space-y-2">
             <NavItem icon={IconHome} label="Home" onClick={home} collapsed={collapsed}/>
             <NavItem icon={IconFolder} label="Select folder" collapsed={collapsed} onClick={handleFolderSelect} />
             <br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
             <NavItem icon={SettingsIcon} label="Settings" collapsed={collapsed}/>
           </div>
-
-          {/* User badge */}
           <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 p-3 rounded-bl-xl">
             <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5">
               {!collapsed && (
@@ -225,15 +213,9 @@ function Settings() {
             </div>
           </div>
         </motion.aside>
-
-        {/* Content column */}
         <div className="flex-1 h-full flex flex-col overflow-hidden">
-          {/* Topbar */}
-
-          {/* Main */}
           <div className="flex-1 overflow-auto p-6 bg-gradient-to-b from-black/40 to-transparent root overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-              {/* Settings / Switch */}
               <Section title="Settings">
                 <div className="space-y-3">
                   <Toggle
@@ -244,8 +226,6 @@ function Settings() {
                   />
                 </div>
               </Section>
-
-              {/* Account */}
               <Section title="Account">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
