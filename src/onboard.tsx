@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import { open } from "@tauri-apps/api/dialog";
 import { readBinaryFile, exists } from "@tauri-apps/api/fs";
@@ -1065,25 +1065,67 @@ const SettingsPanel: React.FC<{
         user={user} 
         handleLogout={handleLogout} 
       />
-
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar user={user} />
+        
+          <AnimatePresence mode="wait">
+            {error && (
+              <div className="fixed inset-0 z-[70] overflow-hidden flex items-center justify-center">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm pointer-events-auto cursor-default"
+                />
 
-        <AnimatePresence>
-          {error && (
-            <motion.div 
-              initial={{ opacity: 0, y: -8 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -8 }} 
-              className="absolute right-6 top-6 z-50"
-            >
-              <div className="bg-red-600/90 text-white px-4 py-2 rounded-md shadow-lg border border-red-500/50">
-                {error}
+                <motion.div
+                  key={error}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                  className="relative z-[80] pointer-events-auto"
+                >
+                  <div className="w-[340px] bg-[#111827] border border-blue-500/20 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+                    
+                    <div className="p-8">
+                      <div className="flex items-start gap-4 text-left">
+                        <div className="flex-shrink-0 w-10 h-10 bg-blue-600/10 rounded-xl flex items-center justify-center border border-blue-500/20">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5 text-blue-400" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                            <path d="M12 9v4" /><path d="M12 17h.01" />
+                          </svg>
+                        </div>
+
+                        <div className="flex flex-col">
+                          <h3 className="text-slate-100 font-semibold text-base mb-1 leading-none">
+                            Error
+                          </h3>
+                          <p className="text-slate-400 text-[13px] mt-2 leading-relaxed pr-2">
+                            {error}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="w-full h-[3px] bg-slate-800">
+                      <motion.div 
+                        initial={{ width: "100%" }}
+                        animate={{ width: "0%" }}
+                        transition={{ 
+                          duration: 3, 
+                          ease: "linear"
+                        }}
+                        onAnimationComplete={() => {
+                          setError(null);
+                        }}
+                        className="h-full bg-blue-500/60"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
+            )}
+          </AnimatePresence>
         <div className="flex-1 overflow-auto p-8 custom-scrollbar">
   <AnimatePresence mode="wait">
     {active === "home" && (

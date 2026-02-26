@@ -401,10 +401,6 @@ pub async fn launch_fn(
 
     let pid = fort_cmd.id();
 
-    let mut sys = System::new_all();
-    let mut process_detected = false;
-    let target_process = "FortniteClient-Win64-Shipping.exe";
-
     tokio::time::sleep(Duration::from_secs(60)).await;
 
     if !inject_urls.is_empty() {

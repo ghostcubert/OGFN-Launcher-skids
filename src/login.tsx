@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { open } from "@tauri-apps/api/shell";
 import { fetch, ResponseType } from "@tauri-apps/api/http";
 import { Defaults } from "./defaults";
 import { Minus, X } from "lucide-react";
@@ -249,13 +248,11 @@ export default function Login() {
             {loading ? "Logging in..." : "Sign In"}
             </motion.button>
           </form>
-
-
             <div className="mt-8 text-center">
               <span className="text-slate-500 text-xs">Don't have an account? </span>
               <button 
                 type="button" 
-                onClick={() => open("https://example.com")} 
+                onClick={() => window.open(import.meta.env.VITE_DISCORD_LINK, "_blank")} 
                 className="text-[#0ea5e9] text-xs font-bold hover:underline cursor-pointer"
               >
                 Create one

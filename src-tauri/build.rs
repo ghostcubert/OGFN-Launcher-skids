@@ -31,8 +31,6 @@ fn main() {
     </security>
 </trustInfo>
 </assembly>"#;
-
-    // Optional: actually write the manifest to a file
     fs::write("target/manifest.xml", manifest).expect("Could not write manifest");
 
     tauri_build::try_build(
