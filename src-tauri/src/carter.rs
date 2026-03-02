@@ -8,15 +8,50 @@ use tauri::{AppHandle};
 use winapi::shared::minwindef::FALSE;
 use winapi::um::handleapi::CloseHandle;
 use winapi::um::processthreadsapi::{OpenThread, SuspendThread};
-use winapi::um::tlhelp32::{
-    CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32,
-};
+use winapi::um::tlhelp32::{CreateToolhelp32Snapshot, Thread32First, Thread32Next, TH32CS_SNAPTHREAD, THREADENTRY32};
 use winapi::um::debugapi::IsDebuggerPresent;
-// use std::env;
+use winapi::um::synchapi::WaitForSingleObject;
+use winapi::um::winbase::INFINITE;
 use tauri::Manager;
 use winapi::um::winnt::HANDLE;
 use winapi::um::winnt::THREAD_SUSPEND_RESUME;
 use sysinfo::System;
+
+async fn wait_for_game_stable(pid: u32) -> bool {
+    let mut system = System::new_all();
+    let sys_pid = sysinfo::Pid::from(pid as usize);
+    let mut stable_seconds = 0;
+
+    tokio::time::sleep(Duration::from_secs(15)).await;
+
+    for i in 0..120 {
+        system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+        
+        if let Some(process) = system.processes().get(&sys_pid) {
+            let memory_mb = process.memory() / 1024 / 1024;
+            let cpu_usage = process.cpu_usage();
+
+            println!("Check {}: Memory: {}MB, CPU: {}%", i, memory_mb, cpu_usage);
+            if memory_mb > 1200 && cpu_usage > 1.0 {
+                stable_seconds += 1;
+            } else {
+                stable_seconds = 0;
+            }
+
+            if stable_seconds >= 5 {
+                println!("Game state is stable. Proceeding to injection.");
+                tokio::time::sleep(Duration::from_secs(5)).await;
+                return true;
+            }
+        } else {
+            println!("Process lost during wait.");
+            return false; 
+        }
+        
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+    false
+}
 
 pub fn security_check() -> bool {
     unsafe {
@@ -319,7 +354,7 @@ pub async fn dll_replace(path: &str, url: String, _app: tauri::AppHandle) -> Res
 pub fn inject_dll(pid: u32, dll_path: &str) -> Result<(), String> {
     unsafe {
         let handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
-        if handle.is_null() { return Err("Failed to open process".into()); }
+        if handle.is_null() { return Err("Couldn't find the game process".into()); }
 
         let path_null = format!("{}\0", dll_path);
         let bytes = path_null.as_bytes();
@@ -330,7 +365,12 @@ pub fn inject_dll(pid: u32, dll_path: &str) -> Result<(), String> {
         let k32 = GetModuleHandleA("kernel32.dll\0".as_ptr() as *const i8);
         let load_lib = GetProcAddress(k32, "LoadLibraryA\0".as_ptr() as *const i8);
 
-        CreateRemoteThread(handle, std::ptr::null_mut(), 0, Some(std::mem::transmute(load_lib)), mem, 0, std::ptr::null_mut());
+        let thread = CreateRemoteThread(handle, std::ptr::null_mut(), 0, Some(std::mem::transmute(load_lib)), mem, 0, std::ptr::null_mut());
+        
+        if !thread.is_null() {
+            WaitForSingleObject(thread, INFINITE);
+            CloseHandle(thread);
+        }
         
         CloseHandle(handle);
         Ok(())
@@ -347,22 +387,36 @@ pub async fn launch_fn(
     password: String,
     eor: bool,
 ) -> Result<bool, String> {
+    let window = app.get_window("main").ok_or("Main window not found")?;
+    let base = std::path::PathBuf::from(path);
+
     download_paks(path, paks_urls, &app).await?;
 
     if let Err(e) = dll_replace(path, redirect_url, app.clone()).await {
         return Err(format!("Could not replace DLL: {}", e));
     }
 
-    let base = std::path::PathBuf::from(path);
+    let mut downloaded_dlls = Vec::new();
+    if !inject_urls.is_empty() {
+        for url in inject_urls.split(',') {
+            let url = url.trim();
+            if url.is_empty() { continue; }
+            
+            let filename = url.split('/').last().unwrap_or("inject.dll");
+            let temp_path = std::env::temp_dir().join(filename);
+            let temp_path_str = temp_path.to_str().ok_or("Invalid temp path")?.to_string();
+
+            download(url, filename, &temp_path_str, &window).await?;
+            downloaded_dlls.push(temp_path_str);
+        }
+    }
 
     let mut fort_ac_path = base.clone();
     fort_ac_path.push("FortniteGame\\Binaries\\Win64\\FortniteClient-Win64-Shipping_EAC.exe");
-    if !fort_ac_path.exists() {
-        return Err("FortniteClient-Win64-Shipping_EAC.exe not found".to_string());
-    }
-
+    
     let mut fort_ac_cwd = base.clone();
     fort_ac_cwd.push("FortniteGame\\Binaries\\Win64");
+    
     let _ = std::process::Command::new(fort_ac_path)
         .creation_flags(CREATE_NO_WINDOW | 0x00000004)
         .current_dir(fort_ac_cwd)
@@ -373,9 +427,6 @@ pub async fn launch_fn(
     let mut fort_binary = base.clone();
     fort_binary.push("FortniteGame\\Binaries\\Win64\\FortniteClient-Win64-Shipping.exe");
     
-    let auth_email = format!("-AUTH_LOGIN={}", email);
-    let auth_password = format!("-AUTH_PASSWORD={}", password);
-
     let fort_args = vec![
         "-epicapp=Fortnite".to_string(),
         "-epicenv=Prod".to_string(),
@@ -389,39 +440,28 @@ pub async fn launch_fn(
         "-caldera=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoiYmU5ZGE1YzJmYmVhNDQwN2IyZjQwZWJhYWQ4NTlhZDQiLCJnZW5lcmF0ZWQiOjE2Mzg3MTcyNzgsImNhbGRlcmFHdWlkIjoiMzgxMGI4NjMtMmE2NS00NDU3LTliNTgtNGRhYjNiNDgyYTg2IiwiYWNQcm92aWRlciI6IkVhc3lBbnRpQ2hlYXQiLCJub3RlcyI6IiIsImZhbGxiYWNrIjpmYWxzZX0.VAWQB67RTxhiWOxx7DBjnzDnXyyEnX7OljJm-j2d88G_WgwQ9wrE6lwMEHZHjBd1ISJdUO1UVUqkfLdU5nofBQ".to_string(),
         "-AUTH_TYPE=epic".to_string(),
         if eor { "-eor".to_string() } else { "".to_string() },
-        auth_email,
-        auth_password,
+        format!("-AUTH_LOGIN={}", email),
+        format!("-AUTH_PASSWORD={}", password),
     ];
 
     let fort_cmd = std::process::Command::new(&fort_binary)
         .creation_flags(CREATE_NO_WINDOW)
         .args(&fort_args) 
         .spawn()
-        .map_err(|e| format!("Failed to spawn Fortnite: {}", e))?;
+        .map_err(|e| format!("Failed to spawn: {}", e))?;
 
     let pid = fort_cmd.id();
+    let _ = window.emit("update-status", "Monitoring game load...");
 
-    tokio::time::sleep(Duration::from_secs(60)).await;
-
-    if !inject_urls.is_empty() {
-        let window = app.get_window("main").ok_or("No window")?;
-        tokio::time::sleep(Duration::from_secs(10)).await;
-
-        for url in inject_urls.split(',') {
-            let url = url.trim();
-            if url.is_empty() { continue; }
-            
-            let filename = url.split('/').last().unwrap_or("inject.dll");
-            let temp_path = std::env::temp_dir().join(filename);
-            let temp_path_str = temp_path.to_str().ok_or("Invalid temp path")?;
-
-            download(url, filename, temp_path_str, &window).await?;
-            
-            let _ = inject_dll(pid, temp_path_str);
+    if wait_for_game_stable(pid).await {
+        for dll_path in downloaded_dlls {
+            let _ = inject_dll(pid, &dll_path);
+            tokio::time::sleep(Duration::from_millis(500)).await;
         }
+        let _ = window.emit("update-status", "Ready!");
     }
-    println!("Fortnite launched and DLLs injected successfully.");
-    Ok(true)    
+
+    Ok(true)
 }
 
 #[tauri::command]

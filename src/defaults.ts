@@ -13,6 +13,8 @@ export type DefaultsType = {
   ENABLE_LEADERBOARD_API: boolean;
   ENABLE_SHOP_API: boolean;
   LOGIN_BACKGROUND_URL: string;
+  ENABLE_SHOP_TAB: boolean;
+  ENABLE_LEADERBOARD_TAB: boolean;
 };
 
 const env = import.meta.env;
@@ -31,7 +33,9 @@ export const Defaults: DefaultsType = {
   ENABLE_LOGIN_API: env.VITE_ENABLE_LOGIN_API === "true",
   ENABLE_LEADERBOARD_API: env.VITE_ENABLE_LEADERBOARD_API === "true",
   ENABLE_SHOP_API: env.VITE_ENABLE_SHOP_API === "true",
-  LOGIN_BACKGROUND_URL: env.VITE_LOGIN_BACKGROUND_URL || "https://i.ibb.co/hx42Ndqt/fn.jpg"
+  LOGIN_BACKGROUND_URL: env.VITE_LOGIN_BACKGROUND_URL || "https://i.ibb.co/hx42Ndqt/fn.jpg",
+  ENABLE_SHOP_TAB: env.VITE_ENABLE_SHOP_TAB === "true",
+  ENABLE_LEADERBOARD_TAB: env.VITE_LEADERBOARD_TAB === "true",
 };
 
 export const LibraryConfig = {

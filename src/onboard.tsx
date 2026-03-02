@@ -56,6 +56,7 @@ function bytesToBase64(bytes: Uint8Array) {
   }
   return btoa(binary);
 }
+
 function getFolderName(p: string) {
   const parts = p.split(/\\|\//).filter(Boolean);
   return parts[parts.length - 1] || p;
@@ -124,7 +125,7 @@ const LeaderboardPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchLeaderboard = async () => {
-  if (!Defaults.ENABLE_LEADERBOARD_API) {
+  if (!Defaults.ENABLE_LEADERBOARD_TAB || !Defaults.ENABLE_LEADERBOARD_API) {
     console.log("Leaderboard API is disabled via Defaults.");
     setEntries([]);
     setLoading(false);
@@ -263,7 +264,7 @@ const ShopPanel: React.FC = () => {
 
   useEffect(() => {
   const fetchShop = async () => {
-    if (!Defaults.ENABLE_SHOP_API) {
+    if (!Defaults.ENABLE_SHOP_TAB || !Defaults.ENABLE_SHOP_API) {
       console.log("Shop API is disabled.");
       setLoading(false);
       return;
@@ -641,8 +642,13 @@ const LeftNav: React.FC<LeftNavProps> = ({ active, setActive, user, handleLogout
     <nav className="px-3 space-y-1 flex-1">
       <NavItem icon={<Home size={18} />} label="Home" id="home" active={active} setActive={setActive} />
       <NavItem icon={<Grid size={18} />} label="Library" id="library" active={active} setActive={setActive} />
+      {Defaults.ENABLE_SHOP_TAB && (
       <NavItem icon={<ShoppingCart size={18} />} label="Shop" id="shop" active={active} setActive={setActive} />
+      )}
+      {Defaults.ENABLE_LEADERBOARD_TAB && (
       <NavItem icon={<Trophy size={18} />} label="Leaderboard" id="leaderboard" active={active} setActive={setActive} />
+      )}
+      
       
       <div className="my-4 mx-4 h-px bg-white/5" />
       
@@ -1208,7 +1214,7 @@ const SettingsPanel: React.FC<{
               </TabTransition>
             )}
 
-            {active === "shop" && (
+            {active === "shop" && Defaults.ENABLE_SHOP_TAB && (
               <TabTransition key="shop">
                 <ShopPanel />
               </TabTransition>
@@ -1226,7 +1232,7 @@ const SettingsPanel: React.FC<{
               </TabTransition>
             )}
 
-            {active === "leaderboard" && (
+            {active === "leaderboard" && Defaults.ENABLE_LEADERBOARD_TAB && (
               <TabTransition key="leaderboard">
                 <LeaderboardPanel />
               </TabTransition>
