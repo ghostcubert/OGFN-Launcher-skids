@@ -124,7 +124,7 @@ const LeaderboardPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchLeaderboard = async () => {
-  if (!Defaults.ENABLE_API) {
+  if (!Defaults.ENABLE_LEADERBOARD_API) {
     console.log("Leaderboard API is disabled via Defaults.");
     setEntries([]);
     setLoading(false);
@@ -263,7 +263,7 @@ const ShopPanel: React.FC = () => {
 
   useEffect(() => {
   const fetchShop = async () => {
-    if (!Defaults.ENABLE_API) {
+    if (!Defaults.ENABLE_SHOP_API) {
       console.log("Shop API is disabled.");
       setLoading(false);
       return;
@@ -1049,7 +1049,7 @@ const SettingsPanel: React.FC<{
   <div
     className="w-screen h-screen flex text-slate-100 relative overflow-hidden rounded-xl border border-[#1e2a38]"
     style={{
-      backgroundImage: `url('${Defaults.BACKGROUND_URL}')`,
+      backgroundImage: `url('${Defaults.MAIN_BACKGROUND_URL}')`,
       backgroundSize: "cover",
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",

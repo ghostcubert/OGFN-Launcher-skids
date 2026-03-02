@@ -81,7 +81,7 @@ export default function Login() {
 
     setLoading(true);
 
-    const isApiEnabled = Defaults.ENABLE_API;
+    const isApiEnabled = Defaults.ENABLE_LOGIN_API;
 
     if (!isApiEnabled) {
       const guestUser = {
@@ -149,7 +149,7 @@ export default function Login() {
       <CustomTitleBar />
       <div className="absolute inset-0 rounded-xl overflow-hidden z-0">
         <img
-          src={Defaults.BACKGROUND_URL}
+          src={Defaults.LOGIN_BACKGROUND_URL}
           alt="background"
           className="w-full h-full object-cover opacity-60"
         />
