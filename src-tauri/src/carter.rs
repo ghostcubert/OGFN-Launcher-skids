@@ -30,8 +30,6 @@ async fn wait_for_game_stable(pid: u32) -> bool {
         if let Some(process) = system.processes().get(&sys_pid) {
             let memory_mb = process.memory() / 1024 / 1024;
             let cpu_usage = process.cpu_usage();
-
-            println!("Check {}: Memory: {}MB, CPU: {}%", i, memory_mb, cpu_usage);
             if memory_mb > 1200 && cpu_usage > 1.0 {
                 stable_seconds += 1;
             } else {
@@ -39,12 +37,12 @@ async fn wait_for_game_stable(pid: u32) -> bool {
             }
 
             if stable_seconds >= 5 {
-                println!("Game state is stable. Proceeding to injection.");
+                println!("Game is good. Ready to inject DLL's.");
                 tokio::time::sleep(Duration::from_secs(5)).await;
                 return true;
             }
         } else {
-            println!("Process lost during wait.");
+            println!("Game lost during wait.");
             return false; 
         }
         
@@ -71,7 +69,7 @@ pub fn start_discord_rpc() {
 
     tokio::spawn(async move {
         if app_id.is_empty() {
-            println!("RPC Error: No Client ID found in environment.");
+            println!("RPC Error: No Client ID found in .env file");
             return;
         }
 
