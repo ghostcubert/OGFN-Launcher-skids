@@ -21,7 +21,7 @@ Download **Bun** to execute code, choose Windows and run the command on powershe
 ## 3. Install C++ Build Tools
 Download **Microsoft C++ Build Tools** to compile the launcher.
 
-[![](https://img.shields.io/badge/C++-00599C?style=flat-square&logo=C%2B%2B&logoColor=white)](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+[![](https://img.shields.io/badge/Install-C++_Build_Tools-purple?style=for-the-badge&logo=C%2B%2B&logoColor=white)](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 
 ---
 
