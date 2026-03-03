@@ -36,3 +36,29 @@ Run this command on the root folder:
 
 ```bash
 bun install
+```
+
+### Step 2: Modify the launcher
+Rename the file ".env.example" to ".env", open it and modify as you like. Here are all the posibilities and what each setting does [Configuration guide here](./Config.md).
+
+### Step 3: Test the launcher
+Open the tauri_test.bat
+
+_or_
+
+Run this command on the root folder
+
+```bash
+bun tauri dev
+```
+
+### Step 4: Building the launcher
+Open the tauri_build.bat
+
+_or_
+
+Run this command on the root folder
+
+```bash
+bun tauri build
+```
