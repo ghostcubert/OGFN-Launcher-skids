@@ -16,12 +16,12 @@ Download **Rust** and choose the version accomodates your device: (32-bit, x64, 
 ### 2. Bun Runtime
 Download **Bun** to execute code, choose Windows and run the command on powershell.
 
-[![](https://img.shields.io/badge/Install-Bun-black?style=for-the-badge&logo=bun)](https://bun.sh/)
+[![](https://img.shields.io/badge/Install-Bun-black?style=for-the-badge&logo=bun)](https://bun.com/get)
 
 ## 3. Install C++ Build Tools
 Download **Microsoft C++ Build Tools** to compile the launcher.
 
-[![](https://img.shields.io/badge/Install-C++_Build_Tools-purple?style=for-the-badge&logo=C++)](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+[![](https://img.shields.io/badge/Install-C++_Build_Tools-purple?style=for-the-badge&logo=c++)](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 
 ---
 
