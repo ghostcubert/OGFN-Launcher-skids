@@ -16,6 +16,16 @@ use tauri::Manager;
 use winapi::um::winnt::HANDLE;
 use winapi::um::winnt::THREAD_SUSPEND_RESUME;
 use sysinfo::System;
+use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
+use std::time::{SystemTime, UNIX_EPOCH};
+use once_cell::sync::Lazy;
+use tokio::sync::watch;
+use std::sync::Mutex;
+
+static CURRENT_RPC_STATE: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new("In Launcher".to_string()));
+static RPC_CHANNEL: Lazy<(watch::Sender<String>, watch::Receiver<String>)> = Lazy::new(|| {
+    watch::channel("In Launcher".to_string())
+});
 
 async fn wait_for_game_stable(pid: u32) -> bool {
     let mut system = System::new_all();
@@ -24,7 +34,7 @@ async fn wait_for_game_stable(pid: u32) -> bool {
 
     tokio::time::sleep(Duration::from_secs(15)).await;
 
-    for i in 0..120 {
+    for _i in 0..120 {
         system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
         
         if let Some(process) = system.processes().get(&sys_pid) {
@@ -51,6 +61,40 @@ async fn wait_for_game_stable(pid: u32) -> bool {
     false
 }
 
+pub fn start_anti_cheat_watchdog(game_pid: u32) {
+    tokio::spawn(async move {
+        let mut system = System::new_all();
+        let forbidden_processes = vec![
+            "ProcessHacker.exe",
+            "x64dbg.exe",
+            "cheatengine-x86_64.exe",
+            "Cheat Engine.exe",
+            "devenv.exe",
+            "Fiddler.exe",
+            "Wireshark.exe",
+            "UuuClient.exe",
+        ];
+
+        loop {
+            system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+
+            let game_alive = system.process(sysinfo::Pid::from(game_pid as usize)).is_some();
+            if !game_alive { break; }
+
+            for (_, process) in system.processes() {
+                let p_name = process.name().to_string_lossy().to_lowercase();
+                if forbidden_processes.iter().any(|&bad| p_name.contains(&bad.to_lowercase())) {
+                    println!("Security Alert: {} detected. Terminating game.", p_name);
+                    kill();
+                    std::process::exit(0);
+                }
+            }
+            
+            tokio::time::sleep(Duration::from_secs(2)).await;
+        }
+    });
+}
+
 pub fn security_check() -> bool {
     unsafe {
         if IsDebuggerPresent() != 0 {
@@ -60,41 +104,39 @@ pub fn security_check() -> bool {
     true
 }
 
-use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
-
 pub fn start_discord_rpc() {
     let app_id = std::env::var("VITE_DISCORD_CLIENT_ID").unwrap_or_default();
     let launcher_name = std::env::var("VITE_LAUNCHER_NAME").unwrap_or_else(|_| "Project".to_string());
     let discord_link = std::env::var("VITE_DISCORD_LINK").unwrap_or_default();
 
     tokio::spawn(async move {
-        if app_id.is_empty() {
-            println!("RPC Error: No Client ID found in .env file");
-            return;
-        }
-
         let mut client = DiscordIpcClient::new(&app_id).expect("Failed to create RPC client");
-        
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64;
+        let mut rx = RPC_CHANNEL.1.clone();
+
         loop {
             if client.connect().is_ok() {
-                println!("Discord RPC Connected!");
                 loop {
-                    let details = format!("Playing {}", launcher_name);
+                    let dynamic_state = rx.borrow().clone();
+                    let details_string = format!("Playing {}", launcher_name);
+
                     let payload = activity::Activity::new()
-                        .state("In Launcher")
-                        .details(&details)
+                        .state(&dynamic_state)
+                        .details(&details_string)
+                        .timestamps(activity::Timestamps::new().start(start_time))
                         .assets(activity::Assets::new()
                             .large_image("logo")
-                            .large_text(&launcher_name))
+                            .large_text(&launcher_name)
+                            .small_image("verified")
+                            .small_text("Official Launcher"))
                         .buttons(vec![activity::Button::new("Join Discord", &discord_link)]);
 
-                    if client.set_activity(payload).is_err() {
-                        break;
-                    }
-                    tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+                    if client.set_activity(payload).is_err() { break; }
+
+                    let _ = tokio::time::timeout(Duration::from_secs(15), rx.changed()).await;
                 }
             }
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            tokio::time::sleep(Duration::from_secs(5)).await;
         }
     });
 }
@@ -388,9 +430,17 @@ pub async fn launch_fn(
     let window = app.get_window("main").ok_or("Main window not found")?;
     let base = std::path::PathBuf::from(path);
 
+    {
+        let state = "Launching...".to_string();
+        *CURRENT_RPC_STATE.lock().unwrap() = state.clone();
+        let _ = RPC_CHANNEL.0.send(state);
+    }
+    let _ = window.emit("launch-status-changed", "launching");
+
     download_paks(path, paks_urls, &app).await?;
 
     if let Err(e) = dll_replace(path, redirect_url, app.clone()).await {
+        let _ = window.emit("launch-status-changed", "closing");
         return Err(format!("Could not replace DLL: {}", e));
     }
 
@@ -399,11 +449,9 @@ pub async fn launch_fn(
         for url in inject_urls.split(',') {
             let url = url.trim();
             if url.is_empty() { continue; }
-            
             let filename = url.split('/').last().unwrap_or("inject.dll");
             let temp_path = std::env::temp_dir().join(filename);
             let temp_path_str = temp_path.to_str().ok_or("Invalid temp path")?.to_string();
-
             download(url, filename, &temp_path_str, &window).await?;
             downloaded_dlls.push(temp_path_str);
         }
@@ -411,7 +459,6 @@ pub async fn launch_fn(
 
     let mut fort_ac_path = base.clone();
     fort_ac_path.push("FortniteGame\\Binaries\\Win64\\FortniteClient-Win64-Shipping_EAC.exe");
-    
     let mut fort_ac_cwd = base.clone();
     fort_ac_cwd.push("FortniteGame\\Binaries\\Win64");
     
@@ -442,13 +489,16 @@ pub async fn launch_fn(
         format!("-AUTH_PASSWORD={}", password),
     ];
 
-    let fort_cmd = std::process::Command::new(&fort_binary)
+    let mut fort_cmd = std::process::Command::new(&fort_binary)
         .creation_flags(CREATE_NO_WINDOW)
         .args(&fort_args) 
         .spawn()
         .map_err(|e| format!("Failed to spawn: {}", e))?;
 
     let pid = fort_cmd.id();
+
+    start_anti_cheat_watchdog(pid);
+
     let _ = window.emit("update-status", "Monitoring game load...");
 
     if wait_for_game_stable(pid).await {
@@ -456,7 +506,25 @@ pub async fn launch_fn(
             let _ = inject_dll(pid, &dll_path);
             tokio::time::sleep(Duration::from_millis(500)).await;
         }
+
+        {
+            let state = "In-Game".to_string();
+            *CURRENT_RPC_STATE.lock().unwrap() = state.clone();
+            let _ = RPC_CHANNEL.0.send(state);
+        }
+        let _ = window.emit("launch-status-changed", "ingame");
         let _ = window.emit("update-status", "Ready!");
+
+        let window_clone = window.clone();
+        tokio::spawn(async move {
+            let _ = fort_cmd.wait();
+            {
+                let state = "In Launcher".to_string();
+                *CURRENT_RPC_STATE.lock().unwrap() = state.clone();
+                let _ = RPC_CHANNEL.0.send(state);
+            }
+            let _ = window_clone.emit("launch-status-changed", "closing");
+        });
     }
 
     Ok(true)

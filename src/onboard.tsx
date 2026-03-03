@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import { open } from "@tauri-apps/api/dialog";
 import { readBinaryFile, exists } from "@tauri-apps/api/fs";
@@ -68,6 +68,7 @@ type NewsItem = { id: string; title: string; date: string; desc: string; img?: s
 
 export default function Onboard() {
   const navigate = useNavigate();
+  const [launchStatus, setLaunchStatus] = useState("idle");
   const [active, setActive] = useState<TabKey>("home");
   const [path, setPath] = useState<string | null>(null);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -83,6 +84,21 @@ export default function Onboard() {
   const [progress, setProgress] = useState(0);
   const [currentStatus, setCurrentStatus] = useState("");
   const [warningMsg, setWarningMsg] = useState("");
+
+useEffect(() => {
+  const unlisten = listen("launch-status-changed", (event) => {
+    const newStatus = event.payload as string;
+    setLaunchStatus(newStatus);
+
+    if (newStatus === "closing") {
+      setTimeout(() => {
+        setLaunchStatus("idle");
+      }, 3000);
+    }
+  });
+
+  return () => { unlisten.then(f => f()); };
+}, []);
 
 useEffect(() => {
   const unlistenStart = listen('download-start', () => {
@@ -763,11 +779,18 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
                 <motion.button 
                   onClick={handleLaunch} 
                   whileTap={{ scale: 0.97 }} 
-                  disabled={isLaunching || !current || !user} 
-                  className="cursor-pointer px-8 py-3 rounded-xl bg-blue-500 text-white font-black uppercase italic tracking-tighter shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all flex items-center gap-2"
+                  disabled={launchStatus !== "idle" || !current || !user} 
+                  className={`cursor-pointer px-8 py-3 rounded-xl text-white font-black uppercase italic tracking-tighter transition-all flex items-center gap-2 ${
+                    launchStatus === "idle" 
+                      ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]" 
+                      : "bg-slate-600 cursor-not-allowed opacity-70"
+                  }`}
                 >
                   <Play size={18} fill="currentColor" /> 
-                  {isLaunching ? "Launching..." : "PLAY"}
+                  {launchStatus === "idle" && "PLAY"}
+                  {launchStatus === "launching" && "Launching..."}
+                  {launchStatus === "ingame" && "In-Game"}
+                  {launchStatus === "closing" && "Closing..."}
                 </motion.button>
 
                 <button 

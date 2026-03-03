@@ -2,7 +2,7 @@
 use std::env;
 use std::fs::create_dir_all;
 use sysinfo::System;
-use tauri::{AppHandle, Manager, Window};
+use tauri::{AppHandle, Window};
 mod carter;
 use dotenvy::dotenv;
 
@@ -77,13 +77,16 @@ async fn main() {
     }
 
     tauri::Builder::default()
-        .setup(|app| {
-            let window = app.get_window("main").unwrap();
-            window.on_window_event(|event| {
-                if let tauri::WindowEvent::CloseRequested { .. } = event {
-                    carter::kill(); 
+        .on_window_event(|event| {
+            match event.event() {
+                tauri::WindowEvent::Destroyed | tauri::WindowEvent::CloseRequested { .. } => {
+                    println!("Closing detected. Killing game processes...");
+                    carter::kill();
                 }
-            });
+                _ => {}
+            }
+        })
+        .setup(|_app| {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
