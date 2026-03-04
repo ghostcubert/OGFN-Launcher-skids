@@ -92,7 +92,7 @@ export default function Onboard() {
   const [currentStatus, setCurrentStatus] = useState("");
   const [warningMsg, setWarningMsg] = useState("");
   const [downloadData, setDownloadData] = useState<DownloadPayload | null>(null);
-  const [statusText, setStatusText] = useState("");
+  const [_statusText, setStatusText] = useState("");
 
 useEffect(() => {
   const unlistenProgress = listen<DownloadPayload>('download-progress', (event) => {
@@ -548,6 +548,7 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
   };
 
   const addBuild = async () => {
+    console.log("Add build clicked");
   const selected = await open({
     directory: true,
     multiple: false,
@@ -844,7 +845,7 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
             </div>
           </div>
 
-          {true && (
+          {Defaults.BUILD_DOWNLOAD && (
             <div className="w-64 animate-in slide-in-from-right duration-500">
               <div className="bg-black/40 p-4 rounded-xl border border-white/10 backdrop-blur-md relative overflow-hidden">
                 <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Username</div>

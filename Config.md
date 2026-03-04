@@ -25,4 +25,3 @@ Allows for visual showing ig of the launcher version
 You can put a number for ex: 1.0.0
 
 </details>
-

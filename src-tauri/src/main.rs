@@ -95,7 +95,8 @@ async fn main() {
             firstlaunch,
             is_fortnite_client_running,
             close_launcher,
-            carter::download_paks_cmd
+            carter::download_paks_cmd,
+            carter::install_build
         ])
         .run(tauri::generate_context!())
         .expect("Error starting the app");

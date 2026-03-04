@@ -69,4 +69,3 @@ Run this command
 ```bash
 bun tauri build
 ```
-

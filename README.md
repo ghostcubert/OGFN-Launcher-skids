@@ -15,4 +15,3 @@ This launcher has APIs for this backend: https://github.com/ghostcubert/Reload-B
 If you dont want to use this backend click here for the quick rundown of how the apis work and how to implement them to your
 
 ## Credits to [Pablo](https://github.com/spectrafnsys) for the base launcher
-
