@@ -81,23 +81,194 @@ textarea,
   --border-color: rgba(0, 0, 0, 0.1);
 }
 
-[data-accent="blue"]   { --accent: #3b82f6; --accent-glow: rgba(59, 130, 246, 0.4); }
-[data-accent="red"]    { --accent: #ef4444; --accent-glow: rgba(239, 68, 68, 0.4); }
-[data-accent="green"]  { --accent: #22c55e; --accent-glow: rgba(34, 197, 94, 0.4); }
-[data-accent="purple"] { --accent: #a855f7; --accent-glow: rgba(168, 85, 247, 0.4); }
+[data-accent="blue"]   { --accent: #00d4ff; --accent-glow: rgba(0, 212, 255, 0.4); }
+[data-accent="purple"] { --accent: #8b5cf6; --accent-glow: rgba(139, 92, 246, 0.4); }
+[data-accent="orange"] { --accent: #ff6b35; --accent-glow: rgba(255, 107, 53, 0.4); }
+[data-accent="green"]  { --accent: #00ff88; --accent-glow: rgba(0, 255, 136, 0.4); }
+[data-accent="pink"]   { --accent: #ff69b4; --accent-glow: rgba(255, 105, 180, 0.4); }
+[data-accent="red"]    { --accent: #ff4444; --accent-glow: rgba(255, 68, 68, 0.4); }
+[data-accent="yellow"] { --accent: #ffd700; --accent-glow: rgba(255, 215, 0, 0.4); }
+[data-accent="cyan"]   { --accent: #00ffff; --accent-glow: rgba(0, 255, 255, 0.4); }
+[data-accent="default"] { --accent: #0a0e27; --accent-glow: rgba(10, 14, 39, 0.4); }
+[data-accent="darkblue"] { --accent: #1a237e; --accent-glow: rgba(26, 35, 126, 0.4); }
+[data-accent="darkpurple"] { --accent: #4a148c; --accent-glow: rgba(74, 20, 140, 0.4); }
+[data-accent="darkorange"] { --accent: #e65100; --accent-glow: rgba(230, 81, 0, 0.4); }
+[data-accent="darkgreen"] { --accent: #1b5e20; --accent-glow: rgba(27, 94, 32, 0.4); }
+[data-accent="dark"] { --accent: #000000; --accent-glow: rgba(0, 0, 0, 0.4); }
+[data-accent="white"] { --accent: #ffffff; --accent-glow: rgba(255, 255, 255, 0.4); }
 
-[data-accent="rainbow"] {
-  --accent: #ff0000;
-  --accent-glow: rgba(255, 255, 255, 0.2);
-  animation: rainbow-bg 5s linear infinite;
+/* Background color helpers */
+[data-background="default"] { --bg-main: #0a0e27; --bg-panel: #0f172a; --bg-panel-hover: #1e293b; }
+[data-background="blue"] { --bg-main: #1a237e; --bg-panel: #283593; --bg-panel-hover: #3949ab; }
+[data-background="purple"] { --bg-main: #4a148c; --bg-panel: #6a1b9a; --bg-panel-hover: #7b1fa2; }
+[data-background="orange"] { --bg-main: #e65100; --bg-panel: #ef6c00; --bg-panel-hover: #f57c00; }
+[data-background="green"] { --bg-main: #1b5e20; --bg-panel: #2e7d32; --bg-panel-hover: #388e3c; }
+[data-background="dark"] { --bg-main: #000000; --bg-panel: #0a0a0a; --bg-panel-hover: #18181b; }
+[data-background="lightblue"] { --bg-main: #00d4ff; --bg-panel: #0ea5e9; --bg-panel-hover: #0284c7; }
+[data-background="lightpurple"] { --bg-main: #8b5cf6; --bg-panel: #7c3aed; --bg-panel-hover: #6d28d9; }
+[data-background="lightorange"] { --bg-main: #ff6b35; --bg-panel: #ea580c; --bg-panel-hover: #dc2626; }
+[data-background="lightgreen"] { --bg-main: #00ff88; --bg-panel: #10b981; --bg-panel-hover: #059669; }
+[data-background="pink"] { --bg-main: #ff69b4; --bg-panel: #ec4899; --bg-panel-hover: #db2777; }
+[data-background="red"] { --bg-main: #ff4444; --bg-panel: #ef4444; --bg-panel-hover: #dc2626; }
+[data-background="yellow"] { --bg-main: #ffd700; --bg-panel: #eab308; --bg-panel-hover: #ca8a04; }
+[data-background="cyan"] { --bg-main: #00ffff; --bg-panel: #06b6d4; --bg-panel-hover: #0891b2; }
+[data-background="white"] { --bg-main: #ffffff; --bg-panel: #f8fafc; --bg-panel-hover: #e2e8f0; }
+
+/* Accent helpers */
+[data-accent="blue"]   { --accent-20: rgba(0, 212, 255, 0.20); --accent-35: rgba(0, 212, 255, 0.35); --launcher-bg-tint: rgba(0, 212, 255, 0.12); --launcher-bg-tint-strong: rgba(0, 212, 255, 0.22); }
+[data-accent="purple"] { --accent-20: rgba(139, 92, 246, 0.20); --accent-35: rgba(139, 92, 246, 0.35); --launcher-bg-tint: rgba(139, 92, 246, 0.10); --launcher-bg-tint-strong: rgba(139, 92, 246, 0.20); }
+[data-accent="orange"] { --accent-20: rgba(255, 107, 53, 0.20); --accent-35: rgba(255, 107, 53, 0.35); --launcher-bg-tint: rgba(255, 107, 53, 0.10); --launcher-bg-tint-strong: rgba(255, 107, 53, 0.20); }
+[data-accent="green"]  { --accent-20: rgba(0, 255, 136, 0.20); --accent-35: rgba(0, 255, 136, 0.35); --launcher-bg-tint: rgba(0, 255, 136, 0.10); --launcher-bg-tint-strong: rgba(0, 255, 136, 0.20); }
+[data-accent="pink"]   { --accent-20: rgba(255, 105, 180, 0.20); --accent-35: rgba(255, 105, 180, 0.35); --launcher-bg-tint: rgba(255, 105, 180, 0.10); --launcher-bg-tint-strong: rgba(255, 105, 180, 0.20); }
+[data-accent="red"]    { --accent-20: rgba(255, 68, 68, 0.20); --accent-35: rgba(255, 68, 68, 0.35); --launcher-bg-tint: rgba(255, 68, 68, 0.10); --launcher-bg-tint-strong: rgba(255, 68, 68, 0.20); }
+[data-accent="yellow"] { --accent-20: rgba(255, 215, 0, 0.20); --accent-35: rgba(255, 215, 0, 0.35); --launcher-bg-tint: rgba(255, 215, 0, 0.10); --launcher-bg-tint-strong: rgba(255, 215, 0, 0.20); }
+[data-accent="cyan"]   { --accent-20: rgba(0, 255, 255, 0.20); --accent-35: rgba(0, 255, 255, 0.35); --launcher-bg-tint: rgba(0, 255, 255, 0.10); --launcher-bg-tint-strong: rgba(0, 255, 255, 0.20); }
+[data-accent="default"] { --accent-20: rgba(10, 14, 39, 0.20); --accent-35: rgba(10, 14, 39, 0.35); --launcher-bg-tint: rgba(10, 14, 39, 0.10); --launcher-bg-tint-strong: rgba(10, 14, 39, 0.20); }
+[data-accent="darkblue"] { --accent-20: rgba(26, 35, 126, 0.20); --accent-35: rgba(26, 35, 126, 0.35); --launcher-bg-tint: rgba(26, 35, 126, 0.10); --launcher-bg-tint-strong: rgba(26, 35, 126, 0.20); }
+[data-accent="darkpurple"] { --accent-20: rgba(74, 20, 140, 0.20); --accent-35: rgba(74, 20, 140, 0.35); --launcher-bg-tint: rgba(74, 20, 140, 0.10); --launcher-bg-tint-strong: rgba(74, 20, 140, 0.20); }
+[data-accent="darkorange"] { --accent-20: rgba(230, 81, 0, 0.20); --accent-35: rgba(230, 81, 0, 0.35); --launcher-bg-tint: rgba(230, 81, 0, 0.10); --launcher-bg-tint-strong: rgba(230, 81, 0, 0.20); }
+[data-accent="darkgreen"] { --accent-20: rgba(27, 94, 32, 0.20); --accent-35: rgba(27, 94, 32, 0.35); --launcher-bg-tint: rgba(27, 94, 32, 0.10); --launcher-bg-tint-strong: rgba(27, 94, 32, 0.20); }
+[data-accent="dark"] { --accent-20: rgba(0, 0, 0, 0.20); --accent-35: rgba(0, 0, 0, 0.35); --launcher-bg-tint: rgba(0, 0, 0, 0.10); --launcher-bg-tint-strong: rgba(0, 0, 0, 0.20); }
+[data-accent="white"] { --accent-20: rgba(255, 255, 255, 0.20); --accent-35: rgba(255, 255, 255, 0.35); --launcher-bg-tint: rgba(255, 255, 255, 0.10); --launcher-bg-tint-strong: rgba(255, 255, 255, 0.20); }
+[data-accent="red"]    { --accent-20: rgba(255, 68, 68, 0.20); --accent-35: rgba(255, 68, 68, 0.35); --launcher-bg-tint: rgba(255, 68, 68, 0.10); --launcher-bg-tint-strong: rgba(255, 68, 68, 0.20); }
+[data-accent="yellow"] { --accent-20: rgba(255, 215, 0, 0.20); --accent-35: rgba(255, 215, 0, 0.35); --launcher-bg-tint: rgba(255, 215, 0, 0.10); --launcher-bg-tint-strong: rgba(255, 215, 0, 0.20); }
+[data-accent="cyan"]   { --accent-20: rgba(0, 255, 255, 0.20); --accent-35: rgba(0, 255, 255, 0.35); --launcher-bg-tint: rgba(0, 255, 255, 0.10); --launcher-bg-tint-strong: rgba(0, 255, 255, 0.20); }
+
+.accent-text { color: var(--accent); }
+.accent-bg { background-color: var(--accent); }
+.accent-bg-soft { background-color: var(--accent-20); }
+.accent-border { border-color: var(--accent-35); }
+.accent-shadow-sm { box-shadow: 0 0 15px var(--accent-glow); }
+.accent-shadow { box-shadow: 0 0 20px var(--accent-glow); }
+.accent-shadow-strong { box-shadow: 0 0 30px var(--accent-glow); }
+
+.launcher-accent-backdrop {
+  background:
+    radial-gradient(900px circle at 18% 12%, var(--launcher-bg-tint-strong), transparent 60%),
+    radial-gradient(800px circle at 85% 70%, var(--launcher-bg-tint), transparent 55%),
+    var(--bg-main);
+  transition: background 0.45s ease-out;
 }
 
-@keyframes rainbow-bg {
-  0% { --accent: #ff0000; }
-  17% { --accent: #ff8000; }
-  33% { --accent: #ffff00; }
-  50% { --accent: #00ff00; }
-  67% { --accent: #0000ff; }
-  83% { --accent: #8000ff; }
-  100% { --accent: #ff0000; }
+.accent-bg,
+.accent-bg-soft,
+.accent-text,
+.accent-border,
+.accent-shadow-sm,
+.accent-shadow,
+.accent-shadow-strong {
+  transition:
+    background-color 0.35s ease-out,
+    color 0.35s ease-out,
+    border-color 0.35s ease-out,
+    box-shadow 0.45s ease-out;
+}
+
+/* Falling dots animation */
+@keyframes fall {
+  0% {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+/* Glossy Background Effect */
+.glossy-background {
+  position: relative;
+}
+
+.glossy-background::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  backdrop-filter: blur(1px) brightness(1.1) saturate(1.2);
+  pointer-events: none;
+  z-index: 1;
+  animation: glossyShimmer 8s ease-in-out infinite;
+}
+
+@keyframes glossyShimmer {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+/* Gradient Background Effect */
+.gradient-background::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    linear-gradient(45deg, var(--accent-20) 0%, transparent 30%),
+    linear-gradient(-45deg, transparent 70%, var(--accent-20) 100%),
+    radial-gradient(circle at 25% 25%, var(--accent-20) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, var(--accent-20) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 1;
+  animation: gradientFlow 12s ease-in-out infinite;
+}
+
+@keyframes gradientFlow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: rotate(0deg) scale(1);
+  }
+  33% {
+    opacity: 0.5;
+    transform: rotate(120deg) scale(1.1);
+  }
+  66% {
+    opacity: 0.4;
+    transform: rotate(240deg) scale(0.9);
+  }
+}
+
+/* Enhanced Glow Effects */
+.enhanced-glow .accent-bg,
+.enhanced-glow .accent-shadow,
+.enhanced-glow .accent-shadow-sm,
+.enhanced-glow .accent-shadow-strong {
+  box-shadow: 
+    0 0 20px var(--accent-glow),
+    0 0 40px var(--accent-glow),
+    0 0 60px var(--accent-glow);
+}
+
+.enhanced-glow .accent-bg {
+  filter: brightness(1.1) saturate(1.2);
+}
+
+/* Dynamic Blur Intensity */
+:root {
+  --blur-intensity: 4px;
+}
+
+.launcher-accent-backdrop {
+  backdrop-filter: blur(var(--blur-intensity));
 }

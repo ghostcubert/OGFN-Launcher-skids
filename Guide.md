@@ -39,7 +39,7 @@ bun install
 ```
 
 ### Step 2: Modify the launcher
-Rename the file ".env.example" to ".env", open it and modify as you like. Here are all the posibilities and what each setting does [Configuration guide here](./Config.md).
+Rename the file ".env.example" to ".env", open it and modify as you like. Here are is what each setting does on the env file [Configuration guide](./Config.md).
 
 ### Step 3: Test the launcher
 Open the tauri_test.bat

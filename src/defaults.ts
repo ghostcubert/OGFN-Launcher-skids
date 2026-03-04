@@ -15,6 +15,8 @@ export type DefaultsType = {
   LOGIN_BACKGROUND_URL: string;
   ENABLE_SHOP_TAB: boolean;
   ENABLE_LEADERBOARD_TAB: boolean;
+  BUILD_DOWNLOAD: boolean;
+  BUILD_DOWNLOAD_URL: string;
 };
 
 const env = import.meta.env;
@@ -36,6 +38,8 @@ export const Defaults: DefaultsType = {
   LOGIN_BACKGROUND_URL: env.VITE_LOGIN_BACKGROUND_URL || "https://i.ibb.co/hx42Ndqt/fn.jpg",
   ENABLE_SHOP_TAB: env.VITE_ENABLE_SHOP_TAB === "true",
   ENABLE_LEADERBOARD_TAB: env.VITE_LEADERBOARD_TAB === "true",
+  BUILD_DOWNLOAD: env.VITE_BUILD_DOWNLOAD === "true",
+  BUILD_DOWNLOAD_URL: env.VITE_BUILD_DOWNLOAD_URL || "",
 };
 
 export const LibraryConfig = {

@@ -4,7 +4,7 @@ use winapi::um::winnt::{MEM_COMMIT, MEM_RESERVE, PAGE_READWRITE, PROCESS_ALL_ACC
 use winapi::um::libloaderapi::{GetModuleHandleA, GetProcAddress};
 use std::time::{Duration};
 use std::os::windows::process::CommandExt;
-use tauri::{AppHandle};
+use tauri::{AppHandle, Manager};
 use winapi::shared::minwindef::FALSE;
 use winapi::um::handleapi::CloseHandle;
 use winapi::um::processthreadsapi::{OpenThread, SuspendThread};
@@ -12,7 +12,6 @@ use winapi::um::tlhelp32::{CreateToolhelp32Snapshot, Thread32First, Thread32Next
 use winapi::um::debugapi::IsDebuggerPresent;
 use winapi::um::synchapi::WaitForSingleObject;
 use winapi::um::winbase::INFINITE;
-use tauri::Manager;
 use winapi::um::winnt::HANDLE;
 use winapi::um::winnt::THREAD_SUSPEND_RESUME;
 use sysinfo::System;
@@ -21,11 +20,81 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use once_cell::sync::Lazy;
 use tokio::sync::watch;
 use std::sync::Mutex;
+use std::fs;
+use std::io::Write;
+use futures_util::StreamExt;
 
 static CURRENT_RPC_STATE: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new("In Launcher".to_string()));
 static RPC_CHANNEL: Lazy<(watch::Sender<String>, watch::Receiver<String>)> = Lazy::new(|| {
     watch::channel("In Launcher".to_string())
 });
+
+#[derive(Clone, serde::Serialize)]
+struct Payload {
+    progress: f64,
+    speed: f64,
+    downloaded: u64,
+    total: u64,
+}
+#[tauri::command]
+pub async fn install_build(url: String, dest_path: String, app: tauri::AppHandle) -> Result<(), String> {
+    let game_folder = std::path::Path::new(&dest_path).join("MyGameName");
+    fs::create_dir_all(&game_folder).map_err(|e| e.to_string())?;
+    
+    let temp_archive = game_folder.join("download.tmp");
+    let window = app.get_window("main").ok_or("Window not found")?;
+
+    let client = reqwest::Client::new();
+    let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let total_size = response.content_length().ok_or("Server didn't provide file size")?;
+    
+    let mut downloaded: u64 = 0;
+    let mut stream = response.bytes_stream();
+    let start_time = std::time::Instant::now();
+
+    {
+        let mut file = fs::File::create(&temp_archive).map_err(|e| e.to_string())?;
+        while let Some(item) = stream.next().await {
+            let chunk = item.map_err(|e| e.to_string())?;
+            file.write_all(&chunk).map_err(|e| e.to_string())?;
+            
+            downloaded += chunk.len() as u64;
+            let elapsed = start_time.elapsed().as_secs_f64();
+            let speed = if elapsed > 0.0 { downloaded as f64 / elapsed } else { 0.0 };
+
+            let _ = window.emit("download-progress", Payload {
+                progress: (downloaded as f64 / total_size as f64) * 100.0,
+                speed,
+                downloaded,
+                total: total_size,
+            });
+        }
+    }
+
+    let _ = window.emit("update-status", "Extracting files...");
+    let zip_file = fs::File::open(&temp_archive).map_err(|e| e.to_string())?;
+    let mut archive = zip::ZipArchive::new(std::io::BufReader::new(zip_file)).map_err(|e| e.to_string())?;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+        let outpath = game_folder.join(file.name());
+
+        if (*file.name()).ends_with('/') {
+            fs::create_dir_all(&outpath).ok();
+        } else {
+            if let Some(p) = outpath.parent() {
+                if !p.exists() { fs::create_dir_all(&p).ok(); }
+            }
+            let outfile = fs::File::create(&outpath).map_err(|e| e.to_string())?;
+            let mut writer = std::io::BufWriter::with_capacity(64 * 1024, outfile);
+            std::io::copy(&mut file, &mut writer).map_err(|e| e.to_string())?;
+        }
+    }
+
+    fs::remove_file(temp_archive).ok();
+    let _ = window.emit("update-status", "Ready to Play!");
+    Ok(())
+}
 
 async fn wait_for_game_stable(pid: u32) -> bool {
     let mut system = System::new_all();

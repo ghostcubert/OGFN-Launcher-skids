@@ -48,6 +48,13 @@ interface CosmeticInfo {
   rarity: string;
 }
 
+interface DownloadPayload {
+  progress: number;
+  speed: number;
+  downloaded: number;
+  total: number;
+}
+
 function bytesToBase64(bytes: Uint8Array) {
   let binary = "";
   const chunk = 0x8000;
@@ -84,6 +91,23 @@ export default function Onboard() {
   const [progress, setProgress] = useState(0);
   const [currentStatus, setCurrentStatus] = useState("");
   const [warningMsg, setWarningMsg] = useState("");
+  const [downloadData, setDownloadData] = useState<DownloadPayload | null>(null);
+  const [statusText, setStatusText] = useState("");
+
+useEffect(() => {
+  const unlistenProgress = listen<DownloadPayload>('download-progress', (event) => {
+    setDownloadData(event.payload);
+  });
+
+  const unlistenStatus = listen<string>('update-status', (event) => {
+    setStatusText(event.payload);
+  });
+
+  return () => {
+    unlistenProgress.then(f => f());
+    unlistenStatus.then(f => f());
+  };
+}, []);
 
 useEffect(() => {
   const unlisten = listen("launch-status-changed", (event) => {
@@ -524,35 +548,33 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
   };
 
   const addBuild = async () => {
-    const selected = await open({ 
-      directory: true,
-      multiple: false,
-      title: "Select Fortnite Folder",
-    });
+  const selected = await open({
+    directory: true,
+    multiple: false,
+    title: "Select Installation or Game Folder",
+  });
 
-    if (!selected || typeof selected !== "string") return;
+  if (!selected || typeof selected !== "string") return;
 
-    try {
-      const hasEngine = await exists(await join(selected, "Engine"));
-      if (!hasEngine) {
-        setError("Invalid build: The folder must contain an 'Engine' folder.");
-        setTimeout(() => setError(null), 5000);
-        return;
-      }
+  try {
+    const hasEngine = await exists(await join(selected, "Engine"));
 
+    if (hasEngine) {
       if (Defaults.ONLY_JOINABLE === true) {
         const folderName = getFolderName(selected);
-        const required = Defaults.JOINABLE_VERSION;
+        const allowedVersions = Defaults.JOINABLE_VERSION.split(',').map(v => v.trim());
+        const isVersionAllowed = allowedVersions.some(version => folderName.includes(version));
 
-        if (!folderName.includes(required)) {
-          setError(`Build not supported: Only version ${required} is allowed.`);
+        if (!isVersionAllowed) {
+          const versionList = allowedVersions.join(' or ');
+          setError(`Build not supported: Only version ${versionList} is allowed.`);
           setTimeout(() => setError(null), 5000);
           return;
         }
       }
 
-      if (builds.length >= 1) {
-        setError("Maximum builds in library reached. Remove one first.");
+      if (builds.length >= 5) {
+        setError("Maximum builds in library reached.");
         setTimeout(() => setError(null), 5000);
         return;
       }
@@ -563,8 +585,7 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
       let coverDataUrl: string | undefined;
       if (hasSplash) {
         const bytes = await readBinaryFile(splashPath);
-        const b64 = bytesToBase64(bytes);
-        coverDataUrl = "data:image/bmp;base64," + b64;
+        coverDataUrl = "data:image/bmp;base64," + bytesToBase64(bytes);
       }
 
       const item: BuildItem = {
@@ -579,18 +600,39 @@ const isShopEmpty = shopData.featured.length === 0 && shopData.daily.length === 
       setPath(selected);
       localStorage.setItem("SettingsMP.builds", JSON.stringify(updatedBuilds));
 
-      const pakUrls = Defaults.PAKS_AND_SIGS_LINKS || "";
-      try {
-        await invoke("download_paks_cmd", { gameRoot: selected, urls: pakUrls });
-      } catch (err) {
-        console.error("Auto-sync failed:", err);
-      }
+    } else {
+      setIsDownloading(true);
+      setWarningMsg("");
+      setStatusText("Initializing Download...");
 
-    } catch (e) {
-      setError("Could not add build: " + String(e));
-      setTimeout(() => setError(null), 5000);
+      await invoke("install_build", { 
+        url: "https://your-server.com/game-files.zip", 
+        destPath: selected 
+      });
+
+      const gamePath = await join(selected, "MyGameName");
+      
+      const item: BuildItem = {
+        id: String(Date.now()),
+        path: gamePath,
+        name: "Newly Installed Build",
+      };
+
+      const updatedBuilds = [item, ...builds];
+      setBuilds(updatedBuilds);
+      setPath(gamePath);
+      localStorage.setItem("SettingsMP.builds", JSON.stringify(updatedBuilds));
+      
+      setIsDownloading(false);
+      setStatusText("Installation Complete!");
     }
-  };
+  } catch (e) {
+    console.error(e);
+    setError("Process failed: " + String(e));
+    setIsDownloading(false);
+    setTimeout(() => setError(null), 5000);
+  }
+};
   
 
   const removeBuild = (id: string) => {
@@ -750,104 +792,132 @@ const TopBar: React.FC<TopBarProps> = ({ user }) => {
   const bannerImage = current?.coverDataUrl || Defaults.PLACEHOLDER_IMAGE;
 
   return (
-      <div className="mb-6 animate-in fade-in duration-700">
-        <div className="relative rounded-2xl overflow-hidden border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl transition-all">
-          <div className="relative h-72">
-            <img 
-              key={bannerImage}
-              src={bannerImage} 
-              className="w-full h-full object-cover brightness-[0.6] scale-100 animate-in fade-in duration-500" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0b1724] via-[#0b1724]/20 to-transparent" />
-          </div>
-          <div className="absolute inset-0 p-8 flex items-end gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                 <div className="h-1 w-6 bg-blue-500 rounded-full" />
-                 <span className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em]">
-                   {current ? "Active Build" : "Featured Content"}
-                 </span>
-              </div>
-              <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter drop-shadow-lg">
-                {`${current?.name ?? "Ready to Play"} ${Defaults.LAUNCHER_NAME}`}
-              </h2>
-              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1 opacity-80">
-                {current ? `PATH: ${current.path}` : "No build selected — add one in Library"}
-              </p>
+    <div className="mb-6 animate-in fade-in duration-700">
+      <div className="relative rounded-2xl overflow-hidden border-2 border-white/10 bg-[#0b1724]/60 backdrop-blur-xl shadow-2xl transition-all">
+        <div className="relative h-72">
+          <img 
+            key={bannerImage} 
+            src={bannerImage} 
+            className="w-full h-full object-cover brightness-[0.6] scale-100 animate-in fade-in duration-500" 
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0b1724] via-[#0b1724]/20 to-transparent" />
+        </div>
+        <div className="absolute inset-0 p-8 flex items-end gap-6">
 
-              <div className="mt-6 flex items-center gap-3">
-                <motion.button 
-                  onClick={handleLaunch} 
-                  whileTap={{ scale: 0.97 }} 
-                  disabled={launchStatus !== "idle" || !current || !user} 
-                  className={`cursor-pointer px-8 py-3 rounded-xl text-white font-black uppercase italic tracking-tighter transition-all flex items-center gap-2 ${
-                    launchStatus === "idle" 
-                      ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]" 
-                      : "bg-slate-600 cursor-not-allowed opacity-70"
-                  }`}
-                >
-                  <Play size={18} fill="currentColor" /> 
-                  {launchStatus === "idle" && "PLAY"}
-                  {launchStatus === "launching" && "Launching..."}
-                  {launchStatus === "ingame" && "In-Game"}
-                  {launchStatus === "closing" && "Closing..."}
-                </motion.button>
-
-                <button 
-                  onClick={() => setActive("library")} 
-                  className="cursor-pointer px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 font-black uppercase italic tracking-tighter hover:bg-white/10 transition-all"
-                >
-                  Library
-                </button>
-              </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="h-1 w-6 bg-blue-500 rounded-full" />
+              <span className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em]">
+                {current ? "Active Build" : "Featured Content"}
+              </span>
             </div>
-            <div className="w-64 hidden md:block">
-              <div className="bg-black/40 p-4 rounded-xl border border-white/10 backdrop-blur-md">
+            <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter drop-shadow-lg">
+              {`${current?.name ?? "Ready to Play"} ${Defaults.LAUNCHER_NAME}`}
+            </h2>
+            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1 opacity-80">
+              {current ? `PATH: ${current.path}` : "No build selected — add one in Library"}
+            </p>
+
+            <div className="mt-6 flex items-center gap-3">
+              <motion.button 
+                onClick={handleLaunch} 
+                whileTap={{ scale: 0.97 }} 
+                disabled={launchStatus !== "idle" || !current || !user} 
+                className={`cursor-pointer px-8 py-3 rounded-xl text-white font-black uppercase italic tracking-tighter transition-all flex items-center gap-2 ${
+                  launchStatus === "idle" 
+                    ? "bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]" 
+                    : "bg-slate-600 cursor-not-allowed opacity-70"
+                }`}
+              >
+                <Play size={18} fill="currentColor" /> 
+                {launchStatus === "idle" && "PLAY"}
+                {launchStatus === "launching" && "Launching..."}
+                {launchStatus === "ingame" && "In-Game"}
+                {launchStatus === "closing" && "Closing..."}
+              </motion.button>
+              <button 
+                onClick={() => setActive("library")} 
+                className="cursor-pointer px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-200 font-black uppercase italic tracking-tighter hover:bg-white/10 transition-all"
+              >
+                Library
+              </button>
+            </div>
+          </div>
+
+          {true && (
+            <div className="w-64 animate-in slide-in-from-right duration-500">
+              <div className="bg-black/40 p-4 rounded-xl border border-white/10 backdrop-blur-md relative overflow-hidden">
                 <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Username</div>
                 <div className="text-sm text-white font-black uppercase italic tracking-tighter mt-1 truncate">
                   {user?.email ? user.email.split("@")[0] : "Not logged in"}
                 </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
-                     <div className="h-full w-full bg-blue-500/50" />
+
+                <div className="mt-4">
+                  <div className="flex justify-between items-end mb-1">
+                    <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest">
+                      {isDownloading ? "Download Progress" : "System Status"}
+                    </span>
+                    {isDownloading && (
+                      <span className="text-[9px] text-blue-400 font-bold italic">
+                        {downloadData?.progress.toFixed(0)}%
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                      initial={{ width: 0 }}
+                      animate={{ 
+                        width: isDownloading ? `${downloadData?.progress || 0}%` : "100%" 
+                      }}
+                      transition={{ duration: 0.5 }}
+                    />
                   </div>
                 </div>
+
+                {isDownloading && downloadData && (
+                  <div className="mt-3 flex flex-col gap-1">
+                    <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                      <span>Speed:</span>
+                      <span className="text-white">{(downloadData.speed / 1024 / 1024).toFixed(2)} MB/s</span>
+                    </div>
+                    <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                      <span>Size:</span>
+                      <span>{(downloadData.downloaded / 1024 / 1024).toFixed(0)} / {(downloadData.total / 1024 / 1024).toFixed(0)} MB</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
         </div>
-      <div className="mt-4 flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-        {news.map((n) => (
-          <motion.div 
-            key={n.id} 
-            whileHover={{ y: -5 }} 
-            className="min-w-[280px] rounded-xl overflow-hidden border border-white/5 bg-[#0b1724]/40 backdrop-blur-sm group cursor-pointer relative"
-          >
-            <div className="relative h-28 overflow-hidden transition-transform duration-500 ease-out group-hover:scale-110">
-              <img 
-                src={n.img} 
-                alt={n.title} 
-                className="h-full w-full object-cover" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1724] to-transparent opacity-90" />
-            </div>
-            <div className="p-4 relative z-10">
-              <div className="text-[9px] text-blue-400 font-black uppercase tracking-widest">
-                {n.date}
-              </div>
-              <div className="text-sm text-white font-black uppercase italic tracking-tight mt-1 group-hover:text-blue-400 transition-colors duration-300">
-                {n.title}
-              </div>
-              <div className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-snug">
-                {n.desc}
-              </div>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-500 origin-center scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100 z-20" />
-          </motion.div>
-        ))}
       </div>
+
+    <div className="mt-4 flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+      {news.map((n) => (
+        <motion.div 
+          key={n.id} 
+          whileHover={{ y: -5 }} 
+          className="min-w-[280px] rounded-xl overflow-hidden border border-white/5 bg-[#0b1724]/40 backdrop-blur-sm group cursor-pointer relative"
+        >
+          <div className="relative h-28 overflow-hidden transition-transform duration-500 ease-out group-hover:scale-110">
+            <img src={n.img} alt={n.title} className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0b1724] to-transparent opacity-90" />
+          </div>
+          <div className="p-4 relative z-10">
+            <div className="text-[9px] text-blue-400 font-black uppercase tracking-widest">{n.date}</div>
+            <div className="text-sm text-white font-black uppercase italic tracking-tight mt-1 group-hover:text-blue-400 transition-colors duration-300">
+              {n.title}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-snug">{n.desc}</div>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-blue-500 origin-center scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100 z-20" />
+        </motion.div>
+      ))}
     </div>
-  );
+  </div>
+);
 };
 
 const LibraryPanel: React.FC = () => (
