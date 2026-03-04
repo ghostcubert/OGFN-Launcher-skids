@@ -1,1 +1,1 @@
-IDK TBH
+# [Configuration guide](./Config.md)
